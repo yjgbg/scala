@@ -1,0 +1,3 @@
+# Project exclude paths
+/.bsp/
+/out/k8s-helper/compile.dest/classes/
