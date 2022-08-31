@@ -11,7 +11,7 @@ trait StdScalaModule extends ScalaModule {
     MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
   )}
 
-  override def scalaDocOptions: T[Seq[String]] = T {
+  override def scalacOptions: T[Seq[String]] = T {
     super.scalacOptions() ++ Seq("-Yexplicit-nulls", "-Ysafe-init")
   }
 }
@@ -25,5 +25,11 @@ object `k8s-helper` extends StdScalaModule {
   )
 }
 
-object sql extends StdScalaModule
-object server extends StdScalaModule
+object main extends StdScalaModule
+object server extends StdScalaModule {
+  override def ivyDeps: T[Agg[Dep]] = T{Agg(
+    ivy"io.d11::zhttp:2.0.0-RC10",
+    ivy"org.latestbit::circe-tagged-adt-codec:0.10.1",
+    ivy"com.outr::lucene4s:1.11.1"
+    )}
+}

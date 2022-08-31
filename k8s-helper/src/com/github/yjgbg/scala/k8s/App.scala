@@ -1,7 +1,6 @@
 package com.github.yjgbg.scala.k8s
 
 import App.args
-import lib.HasMgrBe
 import support.{Config, JsonDsl, K8sResource, WebApp}
 import scopt.OParser
 import com.softwaremill.macwire.*
