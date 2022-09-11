@@ -1,26 +1,33 @@
 package com.github.yjgbg.scala.server
-import com.outr.lucene4s.query.BoostedSearchTerm
-import zio.ZIO
+
+import com.github.yjgbg.scala.server.layer.{Env, Error}
+import zio.{*, given}
 import zhttp.http.*
-import zhttp.service.*
-import com.outr.lucene4s.{*, given}
+import zhttp.service.{Server, *}
+import zio.redis.{*, given}
+import zio.schema.Schema
+import zio.schema.codec.{Codec, JsonCodec}
+
+import scala.Tuple.Union
+import scala.collection.SortedSet
+import scala.concurrent.duration.*
 
 object Application extends zio.ZIOAppDefault {
-  lazy val lucene = DirectLucene(Nil,directory = None)
-  lazy val nameIndex = lucene.create.field[String]("name")
-  lazy val addressIndex = lucene.create.field[String]("address")
+  import zio.json.{*, given}
+  import RequestBody.*
+  def app[A,B](a:RequestBody[_]):ZIO[A,B,a.Res] = a match
+    case RequestBody.Echo => ???
+    case RequestBody.GetName(id) => ???
 
-  lazy val app: Http[Any, Nothing, Request, Response] = Http.collect[Request]{
-    case Method.GET -> !! / "get"/ name =>
-      Response.text(lucene.query()
-        .filter(fuzzy(nameIndex(name)))
-        .search()
-        .results
-        .map(sr => sr(addressIndex))
-        .mkString(","))
-    case Method.GET -> !! / "set" /name / address =>
-      lucene.doc().fields(nameIndex(name),addressIndex(address)).index()
-      Response.text(address)
-  }
-  override def run = Server.start(8080,app).exitCode
+  override def run: ZIO[Any, RedisError.IOError, ExitCode] = Server
+    .start(9999,Http.collectZIO[Request](req => for {
+      body <- req.body
+      requestBody <- RequestBody.decode(body)
+      res <- app(requestBody)
+      chunk <- ZIO.serviceWith[Codec]{codec => codec.encode(requestBody.responseSchema)(res)}
+    } yield Response(
+      headers = Headers.contentType(HeaderValues.applicationJson),
+      data = HttpData.fromChunk(chunk)
+    )).provideLayer(layer.dev ++ Scope.default))
+    .exitCode
 }
