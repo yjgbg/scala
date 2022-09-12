@@ -2,6 +2,7 @@ package com.github.yjgbg.json
 
 object KubernetesDsl extends KubernetesDsl
 trait KubernetesDsl extends JsonDsl:
+  type Namespace = String
   val _apiVersion = "apiVersion"
   val _appV1 = "app/v1"
   val _kind = "kind"
@@ -20,48 +21,102 @@ trait KubernetesDsl extends JsonDsl:
   def _labels(using Scope)(seq: (String, String)*): Unit = "labels" ++= {seq.foreach { (k, v) => k := v }}
   def _commands(using Scope)(strings: String*): Unit = strings.foreach("commands" += _)
   def _args(using Scope)(strings: String*): Unit = strings.foreach("args" += _)
-  def deployment(name:String)(closure:Scope ?=> Unit): Unit =
-    writeYaml(s"$name-deployment.yaml"){
+  def namespace(ns:String)(closure:Option[Namespace] ?=> Unit) = {
+    closure(using Some(ns))
+  }
+  def deployment(using ns:Option[Namespace])(name: String)(closure:Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-deployment.yaml"){
+      _kind := "Deployment"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
+      _spec ::= {
+        _selector ::= {
+          _matchLabels("app" -> name)
+        }
+      }
       closure(using summon[Scope])
-      "kind" := "Deployment"
     }
-  def service(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-service.yaml"){
+  def service(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-service.yaml"){
+      _kind := "Service"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "Service"
     }
-  def configMap(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-config-map.yaml"){
+  def configMap(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-config-map.yaml"){
+      _kind := "ConfigMap"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind":= "ConfigMap"
     }
-  def secrets(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-secrets.yaml"){
+  def secrets(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-secrets.yaml"){
+      _kind := "Secret"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "Secret"
     }
-  def cronJob(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-cron-job.yaml"){
+  def cronJob(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-cron-job.yaml"){
+      _kind := "CronJob"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "CronJob"
     }
-  def statefulSet(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-stateful-set.yaml"){
+  def statefulSet(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-stateful-set.yaml"){
+      _kind := "StatefulSet"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "StatefulSet"
     }
-  def daemonSet(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-daemon-set.yaml"){
+  def daemonSet(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-daemon-set.yaml"){
+      _kind := "DaemonSet"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "DaemonSet"
     }
-  def persistentVolume(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-persistence-volume.yaml"){
+  def persistentVolume(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-persistence-volume.yaml"){
+      _kind := "PersistentVolume"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "PersistentVolume"
     }
-  def persistentVolumeClaim(name: String)(closure: Scope ?=> Unit): Unit =
-    writeYaml(s"$name-persistence-volume-claim.yaml"){
+  def persistentVolumeClaim(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
+    writeYaml(s"k8s-out-$nsValue-$name-persistence-volume-claim.yaml"){
+      _kind := "PersistentVolumeClaim"
+      _metadata ::= {
+        _name := name
+        _namespace := nsValue
+        _labels("app" -> name)
+      }
       closure(using summon[Scope])
-      "kind" := "PersistentVolumeClaim"
     }
+  private def nsValue(using ns:Option[Namespace]):String = ns.getOrElse("default")
