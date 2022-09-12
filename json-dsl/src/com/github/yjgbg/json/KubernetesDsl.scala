@@ -32,11 +32,6 @@ trait KubernetesDsl extends JsonDsl:
         _namespace := nsValue
         _labels("app" -> name)
       }
-      _spec ::= {
-        _selector ::= {
-          _matchLabels("app" -> name)
-        }
-      }
       closure(using summon[Scope])
     }
   def service(using ns:Option[Namespace])(name: String)(closure: Scope ?=> Unit): Unit =
