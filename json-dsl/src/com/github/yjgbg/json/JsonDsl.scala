@@ -49,11 +49,12 @@ trait JsonDsl:
 
   extension (key: String)
     @targetName(":=")
-    def :=(using scope: Scope)(value: String | Boolean | Double): Unit =
+    def :=(using scope: Scope)(value: String | Boolean | Double | Long): Unit =
       scope.json = plus(Json.fromJsonObject(scope.json), Json.fromJsonObject(JsonObject(key -> (value match
         case str: String => Json.fromString(str)
         case bool: Boolean => Json.fromBoolean(bool)
-        case double: Double => Json.fromBigDecimal(BigDecimal.valueOf(double))
+        case double: Double => Json.fromDoubleOrNull(double)
+        case long: Long => Json.fromLong(long)
         )))).asObject.get
     @targetName("::=")
     def ::=(using scope: Scope)(closure: Scope ?=> Unit): Unit =
@@ -61,12 +62,13 @@ trait JsonDsl:
       closure(using x)
       scope.json = plus(Json.fromJsonObject(scope.json), Json.fromJsonObject(JsonObject(key -> Json.fromJsonObject(x.json)))).asObject.get
     @targetName("+=")
-    def +=(using scope: Scope)(value: String | Boolean | Double): Unit =
-      val jsonArray = Json.fromValues(Seq(value match
+    def +=(using scope: Scope)(value: String | Boolean | Double | Long): Unit =
+      scope.json = plus(Json.fromJsonObject(scope.json), Json.fromJsonObject(JsonObject(key -> Json.fromValues(Seq(value match
         case string: String => Json.fromString(string)
         case boolean: Boolean => Json.fromBoolean(boolean)
-        case double: Double => Json.fromDoubleOrString(double)))
-      scope.json = plus(Json.fromJsonObject(scope.json), Json.fromJsonObject(JsonObject(key -> jsonArray))).asObject.get
+        case double: Double => Json.fromDoubleOrNull(double)
+        case long: Long => Json.fromLong(long)
+      ))))).asObject.get
     @targetName("++=")
     def ++=(using scope: Scope)(closure: Scope ?=> Unit): Unit =
       val x = Scope(JsonObject.empty)
