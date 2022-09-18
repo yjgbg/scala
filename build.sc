@@ -4,7 +4,7 @@ import coursier.Repository
 import mill.define.Task
 import coursier.maven.MavenRepository
 import publish._
-import mill.scalajslib.{ScalaJSModule,api}
+import mill.scalajslib.ScalaJSModule
 trait StdScalaModule extends ScalaModule {
   override def scalaVersion: T[String] = "3.1.3"
 
@@ -58,7 +58,6 @@ object `scalajs-electron` extends StdScalaModule with ScalaJSModule {
     )
     os.proc("open", "index.html")
       .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-    println(millModuleBasePath)
     os.proc("./mill","-w",s"${millModuleBasePath.value.last}.fastOpt")
       .call(cwd = millOuterCtx.millSourcePath,stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
   }
@@ -71,6 +70,12 @@ object `scalajs-electron` extends StdScalaModule with ScalaJSModule {
         .replaceAll("\\$OPT_JS", fastOpt().path.toString()),
       createFolders = true)
     )
+    os.proc("npm","i","-D","electron@latest")
+      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npm","i","--save-dev","@electron-forge/cli")
+      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npx","electron-forge","import")
+      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     os.proc("npm", "install")
       .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     os.proc("npm", "run", "start")
@@ -78,34 +83,50 @@ object `scalajs-electron` extends StdScalaModule with ScalaJSModule {
   }
   def pkg() = T.command {
     compile()
-    os.copy(from = fullOpt().path, to = T.dest / "fullOpt.js")
+    os.copy(from = fullOpt().path, to = T.dest / "tmp" / "fullOpt.js",createFolders = true)
     val electronPath =
       millModuleBasePath.value / "electron"
     os.walk(electronPath).foreach(file => os.write(
-      target = file.segments.drop(electronPath.segmentCount).foldLeft(T.dest)(_ / _),
+      target = file.segments.drop(electronPath.segmentCount).foldLeft(T.dest / "tmp")(_ / _),
       data = os.read(file)
         .replaceAll("\\$OPT_JS", "./fullOpt.js"),
       createFolders = true)
     )
-    os.proc("npm", "install")
-      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npm", "i", "-D", "electron@latest")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npm", "i", "--save-dev", "@electron-forge/cli")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npx", "electron-forge", "import")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     os.proc("npm", "run", "package")
-      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.walk(T.dest / "tmp" / "out")
+      .filter(it => it.segmentCount - T.dest.segmentCount == 3)
+      .foreach(p => os.copy.into(p,T.dest))
+    os.remove.all(T.dest / "tmp")
   }
   def make() = T.command {
     compile()
-    os.copy(from = fullOpt().path,to = T.dest / "fullOpt.js")
+    os.copy(from = fullOpt().path,to = T.dest / "tmp" / "fullOpt.js",createFolders = true)
     val electronPath =
       millModuleBasePath.value / "electron"
     os.walk(electronPath).foreach(file => os.write(
-        target = file.segments.drop(electronPath.segmentCount).foldLeft(T.dest)(_ / _),
+        target = file.segments.drop(electronPath.segmentCount).foldLeft(T.dest / "tmp")(_ / _),
         data = os.read(file)
           .replaceAll("\\$OPT_JS","./fullOpt.js"),
         createFolders = true)
     )
-    os.proc("npm","install")
-      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npm", "i", "-D", "electron@latest")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npm", "i", "--save-dev", "@electron-forge/cli")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.proc("npx", "electron-forge", "import")
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
     os.proc("npm", "run","make")
-      .call(cwd = T.dest, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+      .call(cwd = T.dest / "tmp", stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+    os.walk(T.dest / "tmp" / "out" / "make")
+      .filter(it => it.segmentCount - T.dest.segmentCount == 4)
+      .foreach(p => os.copy.into(p, T.dest))
+    os.remove.all(T.dest / "tmp")
   }
 }
