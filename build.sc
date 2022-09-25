@@ -18,7 +18,7 @@ trait StdScalaModule extends ScalaModule with PublishModule {
     )
   }
 
-  override def publishVersion = "0.1-SNAPSHOT"
+  override def publishVersion = "0.2-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,
@@ -41,17 +41,6 @@ object `json-dsl` extends StdScalaModule {
     ivy"io.circe::circe-yaml:$circeVersion",
     ivy"org.scalikejdbc::scalikejdbc:4.0.0",
     ivy"com.softwaremill.sttp.tapir::tapir-sttp-client:1.1.1"
-  )
-  override def publishVersion = "0.1-SNAPSHOT"
-  override def pomSettings = PomSettings(
-    description = "json-dsl",
-    organization = "com.github.yjgbg",
-    url = "https://github.com/yjgbg/scala",
-    licenses = Seq(License.MIT),
-    versionControl = VersionControl.github("yjgbg", "scala"),
-    developers = Seq(
-      Developer("yjgbg", "Yu Jgbg", "https://github.com/yjgbg")
-    )
   )
 }
 

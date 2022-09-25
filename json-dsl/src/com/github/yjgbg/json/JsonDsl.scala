@@ -26,7 +26,7 @@ trait JsonDsl:
     }
   import scala.annotation.targetName
 
-  case class Scope(var json: Json)
+  class Scope(var json: Json)
   extension (key: String)
     @targetName(":=")
     def :=(using scope: Scope)(value: String | Boolean | Double | Long): Unit =
@@ -73,9 +73,7 @@ trait JsonDsl:
   def writeJson(using Interceptor, Prefix)(path: String)(closure: Scope ?=> Unit): Unit =
     writeFile(path, json(closure).spaces2)
 
-  def writeYaml(using Interceptor, Prefix)(path: String)(
-      closure: Scope ?=> Unit
-  ): Unit =
+  def writeYaml(using Interceptor, Prefix)(path: String)(closure: Scope ?=> Unit): Unit =
     writeFile(path, io.circe.yaml.syntax.AsYaml(json(closure)).asYaml.spaces2)
   def readFile(using prefix: Prefix)(name: String): String =
     java.nio.file.Files.readString(java.nio.file.Paths.get(prefix.value + name))
