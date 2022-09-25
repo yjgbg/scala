@@ -1,3 +1,13 @@
 # Project exclude paths
+/.ammonite/
+/.bloop/
+/.metals/
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 /.bsp/
-/out/k8s-helper/compile.dest/classes/
+/.idea/
+/out/

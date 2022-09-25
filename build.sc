@@ -162,8 +162,7 @@ object `tapir-zhttp-server` extends StdScalaModule {
 }
 
 object `protobuf-example` extends ScalaPBModule with StdScalaModule {
- def scalaPBVersion = "0.11.11"
-
+ override def scalaPBVersion = "0.11.11"
  override def scalaPBGrpc = true
  override def scalaPBFlatPackage = true
 }

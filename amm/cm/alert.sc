@@ -11,8 +11,6 @@ ConnectionPool.singleton(url, user, password)
 
 given session: AutoSession.type = AutoSession
 
-import java.time._
-
 case class Tag(id: Long, name: String)
 
 object Tags extends SQLSyntaxSupport[Tag] {
