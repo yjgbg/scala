@@ -1,0 +1,52 @@
+// 默认为2
+syntax = "proto2";
+package com.github.yjgbg.scala.example;
+message RtaRequest{
+    required uint64 qid = 1;         // 请求唯一标识
+    required OsType os_type = 2;    // 操作系统类型:
+    required string device_id_md5 = 3;     // 该字段已停止下发，后续直接对接device_info字段。
+    required uint64 sign_time = 4;    // 调用的时间戳, 1970-01-01后的毫秒数
+    required string token = 5;         // 验证令牌，其值为md5(qid+sign_time+客户独有标识),开屏为客户url的md5
+    optional AndroidDeviceIdType android_device_type = 6;     // 该字段已停止使用，后续直接对接device_info字段。
+    optional DeviceInfo device_info = 8; // 用户设备信息
+    optional FlowType flow_type = 9; // 流量类型
+    optional uint64 media_id = 11; //媒体id
+    optional uint32 os_major_version = 14; //系统主版本号，仅用于品牌广告百度系开屏流量使用
+    optional bool is_dpa_request = 15; //标记请求是否为DPA请求(需要商品)
+    optional string prefetch_date = 16; //表示在未来发生投放的某个时间点，用于预请求；如果没有，则指当天，仅用于品牌广告百度系开屏流量使用
+    optional uint64 timestamp = 17; //请求的时间戳，单位s，仅用于品牌广告百度系开屏流量使用
+    optional uint32 bes_media_group = 18; // 媒体行业
+    optional uint32 exp_id = 20; // 客户实验号，该字段需申请流量分桶能力后再下发
+
+}
+enum FlowType {
+    SHOUBAI = 1;  // 站内流量
+    UNION =  2;    // 百青藤流量
+    KAIPING = 4; // 开屏（仅指品牌广告百度系开屏流量）
+
+}
+enum OsType {
+    UNKNOWN = 0;    // 类型未知
+    ANDROID = 1;     // android
+    IOS = 2;         // ios
+}
+enum AndroidDeviceIdType {
+    IMEI = 1;
+    OAID = 2;
+}
+message CaidInfo {
+    optional bytes caid = 1;
+    optional bytes caid_version = 2; //caid版本
+}
+message DeviceInfo {
+    optional bytes idfa_md5 = 1;
+    optional bytes imei_md5 = 2;
+    optional bytes android_id_md5 = 3;
+    optional bytes oaid_md5 = 4;
+    optional bytes oaid = 7;
+    optional bytes idfa = 8;
+    optional bytes imei2_md5 = 12;
+    optional bytes bt = 16;
+    optional bytes ut = 17;
+    repeated CaidInfo caid_info = 18; // 多版本的caid
+}

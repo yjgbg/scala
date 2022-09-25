@@ -1,0 +1,36 @@
+metadata:
+  name: tag-alert
+  namespace: has
+apiVersion: batch/v1
+kind: CronJob
+spec:
+  schedule: 1/3 * * * *
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+          - name: vol
+            hostPath:
+              path: /mnt/data/cronJob/tag-alert
+          - configMap:
+              name: tag-alert
+            name: tag-alert
+          containers:
+          - imagePullPolicy: IfNotPresent
+            image: yjgbg/ammonite:2.5.4-3.2-cross
+            env:
+            - name: COURSIER_CACHE
+              value: /workspace/.coursier/
+            command:
+            - sh
+            - -c
+            - amm /script/alert.sc
+            workingDir: /workspace
+            name: tag-alert
+            volumeMounts:
+            - mountPath: /workspace
+              name: vol
+            - mountPath: /script
+              name: tag-alert
+          restartPolicy: Never
