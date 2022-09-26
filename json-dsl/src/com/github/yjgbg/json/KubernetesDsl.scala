@@ -28,7 +28,7 @@ trait KubernetesDsl extends JsonDsl:
     interceptor{_kind := "Deployment";_metadata ::= {_name := name}}{
       writeYaml(s"deployment-$name.yaml")(closure)
     }
-  def configMapFromDir(using Prefix,Interceptor)(name:String,dirPath:String = null):Unit = 
+  def configMapFromDir(using Prefix,Interceptor)(name:String,dirPath:String = null, replaceAll:(String,String)*):Unit = 
     interceptor{_kind:="ConfigMap";_metadata ::={_name := name}} {
       writeYaml(s"config-map-$name.yaml"){
         _apiVersion := "v1"
@@ -37,8 +37,8 @@ trait KubernetesDsl extends JsonDsl:
           val files = Files.list(Paths.get(summon[Prefix].value + (if dirPath != null then dirPath else name)))
           files.forEach(path => {
             val k = path.getFileName().toString()
-            val v = Files.readString(path)
-            path.getFileName().toString() := Files.readString(path)
+            val v = replaceAll.foldLeft(Files.readString(path)){case (v,(regex,replacement)) => v.replaceAll(regex,replacement)}
+            k := v
           })
         }
       }
