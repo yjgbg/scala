@@ -56,33 +56,33 @@ trait JsonDsl:
     @targetName("++=")
     def ++=(using scope: Scope)(closure: Scope ?=> Unit): Unit =
       scope.json = plus(scope.json, Json.obj(key -> Json.arr(json(closure))))
-  class Interceptor(val closure: Scope ?=> Unit = {})
-  given Interceptor = Interceptor()
+  opaque type Interceptor = Scope ?=> Unit
+  given Interceptor = {}
   def interceptor(using Interceptor)(in: Scope ?=> Unit)(closure: Interceptor ?=> Unit): Unit =
-    closure(using Interceptor { summon[Interceptor].closure.apply; in.apply })
+    closure(using { summon[Interceptor].apply; in.apply })
   def json(using in: Interceptor)(closure: Scope ?=> Unit): Json =
     val scope = Scope(Json.obj())
-    in.closure(using scope)
+    in(using scope)
     closure(using scope)
     scope.json
 
-  class Prefix(val value: String)
-  given Prefix = Prefix("")
+  opaque type Prefix = String
+  given Prefix = ""
   def prefix(using prefix: Prefix)(value: String)(closure: Prefix ?=> Unit): Unit =
-    closure(using Prefix(prefix.value + value))
+    closure(using prefix + value)
   def writeJson(using Interceptor, Prefix)(path: String)(closure: Scope ?=> Unit): Unit =
     writeFile(path, json(closure).spaces2)
 
   def writeYaml(using Interceptor, Prefix)(path: String)(closure: Scope ?=> Unit): Unit =
     writeFile(path, io.circe.yaml.syntax.AsYaml(json(closure)).asYaml.spaces2)
   def readFile(using prefix: Prefix)(name: String): String =
-    java.nio.file.Files.readString(java.nio.file.Paths.get(prefix.value + name))
+    java.nio.file.Files.readString(java.nio.file.Paths.get(prefix + name))
 
   def writeFile(using prefix: Prefix)(path: String, content: String): Unit = {
     import java.nio.file.{Paths,Files}
-    val p = Paths.get(prefix.value + path)
+    val p = Paths.get(prefix + path)
     Files.createDirectories(p.getParent())
-    val writer = new java.io.FileWriter(prefix.value + path)
+    val writer = new java.io.FileWriter(prefix + path)
     writer.write(content)
     writer.flush()
     writer.close()

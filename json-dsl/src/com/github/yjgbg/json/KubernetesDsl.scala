@@ -4,6 +4,32 @@ import io.circe.Json
 
 object KubernetesDsl extends KubernetesDsl
 trait KubernetesDsl extends JsonDsl:
+  private def currentContext:String = {
+    import sys.process._
+    "kubectl config get-contexts".!!.lines()
+      .filter(it => it.contains("*"))
+      .findAny().orElseThrow()
+      .split(" ")
+      .filter(!_.isBlank())(1)
+  }
+  def k8sApply(closure:Prefix ?=> Unit):Unit = {
+    import sys.process._
+    prefix(s"temp/$currentContext/") {
+      s"rm -rf temp/$currentContext/".! // 清理掉工作区
+      closure.apply // 应用lambda，生成文件
+      import java.nio.file.{Files,Path} // 将生成的文件apply到集群
+      val dryRun = sys.props.get("dryrun").isDefined
+      println(sys.props.get("dryrun"))
+      if (dryRun) {
+        println("dry run enabled")
+        println("so do not apply anything in k8s")
+      } else {
+        Files.list(Path.of(summon[Prefix].toString)).forEach(filePath => s"kubectl apply -f $filePath".!)
+      }
+    }
+  }
+
+  def onContext(context:String)(closure: => Unit):Unit =  if (currentContext == context) closure
   val _apiVersion = "apiVersion"
   val _appV1 = "app/v1"
   val _kind = "kind"
@@ -34,7 +60,7 @@ trait KubernetesDsl extends JsonDsl:
         _apiVersion := "v1"
         "data" ::= {
           import java.nio.file.{Files,Paths}
-          val files = Files.list(Paths.get(summon[Prefix].value + (if dirPath != null then dirPath else name)))
+          val files = Files.list(Paths.get(summon[Prefix].toString + (if dirPath != null then dirPath else name)))
           files.forEach(path => {
             val k = path.getFileName().toString()
             val v = replaceAll.foldLeft(Files.readString(path)){case (v,(regex,replacement)) => v.replaceAll(regex,replacement)}
@@ -55,7 +81,14 @@ trait KubernetesDsl extends JsonDsl:
     interceptor{_kind:="Service";_metadata::={_name:=name}} {
       writeYaml(s"service-$name.yaml")(closure)
     }
-  def gradleSubProjectSpringBootWebApp(using Prefix,Interceptor)(name:String,replicas:Long = 1,ports:Seq[Int],image:String,jarPath:String,javaVersion:8|11|17|18|19 = 17,env:Seq[(String,String)])(closure:Scope ?=> Unit):Unit = {
+  def gradleSubProjectSpringBootWebApp(using Prefix,Interceptor)(
+    name:String,
+    replicas:Long = 1,
+    ports:Seq[Int],
+    image:String,
+    jarPath:String,
+    javaVersion:8|11|17|18|19 = 17,
+    env:Seq[(String,String)])(closure:Scope ?=> Unit):Unit = {
     configMapFromDir(name,dirPath = s"$name/src/main/resources/") // 一个configMap
     deployment(name) { // 一个deployment
       _spec ::= {

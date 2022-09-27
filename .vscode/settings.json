@@ -1,6 +1,15 @@
 {
+  "editor.fontFamily": "Menlo, Monaco, 'Courier New', monospace",
   "editor.scrollBeyondLastLine": false,
   "files.watcherExclude": {
-    "**/target": true
-  }
+    "**/target": true,
+    "**/.bloop": true,
+    "**/.metals": true,
+    "**/.ammonite": true
+  },
+  "workbench.colorTheme": "GitHub Dark",
+  "workbench.iconTheme": "material-icon-theme",
+  "material-icon-theme.folders.theme": "classic",
+  "material-icon-theme.folders.color": "#42a5f5",
+  "files.autoSave": "afterDelay"
 }

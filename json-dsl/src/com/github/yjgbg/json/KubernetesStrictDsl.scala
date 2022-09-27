@@ -1,11 +1,9 @@
 package com.github.yjgbg.json
 
-object KubernetesStrictDsl extends KubernetesStrictDsl
+object KubernetesStrictDsl extends KubernetesStrictDsl,KubernetesStrictEnhenceDsl
 trait KubernetesStrictDsl extends JsonDsl:
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
     prefix(value+"-") {interceptor{"metadata" ::= {"namespace" := value}}(closure)}
-    
-  import scala.annotation.implicitNotFound
   opaque type >>[A,B[_]] = B[A]
   opaque type DeploymentScope = Scope
   def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
@@ -32,15 +30,19 @@ trait KubernetesStrictDsl extends JsonDsl:
     interceptor{"kind" := "CronJob";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"cronjob-$name.yaml")(closure)
     }
+  def schedule(using CronJobScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
     interceptor{"kind" := "ConfigMap";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"configmap-$name.yaml")(closure)
     }
+  def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
+    values.foreach((k,v) => k := v)
+  }
   def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope)
-  (values:(String,String)*) = "metadata" ::= {"labels" ::= {values.foreach(_ := _)}}
+    (values:(String,String)*) = "metadata" ::= {"labels" ::= {values.foreach(_ := _)}}
   def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope)
-  (values:(String,String)*) = "metadata" ::= {"annotations" ::= {values.foreach(_ := _)}}
+    (values:(String,String)*) = "metadata" ::= {"annotations" ::= {values.foreach(_ := _)}}
   opaque type SpecScope[A] = Scope
   def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope]
   (using A)(closure: A >> SpecScope ?=> Unit) = "spec" ::= closure
@@ -49,12 +51,49 @@ trait KubernetesStrictDsl extends JsonDsl:
     case JobScope >> SpecScope => PodScope
     case DeploymentScope >> SpecScope => PodScope
     case CronJobScope >> SpecScope => JobScope
-  def template[A <: (DeploymentScope >> SpecScope)|(CronJobScope >> SpecScope) | (JobScope >> SpecScope)]
+  def template[A <: (DeploymentScope >> SpecScope) | (JobScope >> SpecScope)]
   (using A)(closure: TemplateScope[A] ?=> Unit):Unit =
     "template" ::= closure
+  def suspend(using CronJobScope >> SpecScope)(boolean:Boolean = true) = "suspend" := true
+  def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
+  def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
+    "restartPolicy" := policy
+  def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
+    "volume" ::= {"name" := name;"emptyDir" ::= {}}
+  def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String):Unit = 
+    "volume" ::= {"name" := name;"configMap" ::= {"name" := configMap}}
+  def volumeHostPath(using PodScope >> SpecScope) (name:String,hostPath:String) =
+    "volume" ::= {"name" := name;"hostPath" ::= {"path" := hostPath}}
   type ContainerScope[A] = Scope
-  def container(using PodScope >> SpecScope)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
-    "containers" ++= closure
+  def initContainer(using PodScope >> SpecScope)
+  (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
+    "initContainer" ++= {
+      "name":= name
+      "image":=image
+      closure.apply
+    }
+  def container(using PodScope >> SpecScope)
+  (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
+    "initContainer" ++= {
+      "name":= name
+      "image":=image
+      closure.apply
+    }
+  def workDir(using PodScope >> SpecScope >> ContainerScope)(path:String):Unit = 
+    "workDir" := path
+  def imagePullPolicy(using PodScope >> SpecScope >> ContainerScope)
+  (value:"Always"|"IfNotPresent"|"Never") :Unit = 
+    "imagePullPolicy" := value
+  def command(using PodScope >> SpecScope >> ContainerScope)(values:String*):Unit = 
+    values.foreach("command" += _)
+  def args(using PodScope >> SpecScope >> ContainerScope)(values:String*):Unit = 
+    values.foreach("args" += _)
+  def env(using PodScope >> SpecScope >> ContainerScope)(values:(String,String)*):Unit = 
+    values.foreach{(k,v) => "env" ++= {"name" := k;"value" := v}}
+  def volumeMounts(using PodScope >> SpecScope >> ContainerScope)
+  (nameAndPath:(String,String)*):Unit = nameAndPath.foreach{(name,mountPath) => 
+    "volumeMounts" ++= {"name" := name;"mountPath" := mountPath}
+  }
 
 
 
