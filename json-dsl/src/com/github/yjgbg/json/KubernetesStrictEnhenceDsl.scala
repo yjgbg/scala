@@ -15,7 +15,8 @@ trait KubernetesStrictEnhenceDsl:
     val configMapName = s"cronjob-$name-script"
     val scriptFileName = "script.sc"
     configMap(configMapName) {
-      data(scriptFileName -> readFile(scriptPath))
+      import java.nio.file.{Files,Path}
+      data(scriptFileName -> Files.readString(Path.of(scriptPath)))
     }
     cronJob(name) {
       self.schedule(schedule)

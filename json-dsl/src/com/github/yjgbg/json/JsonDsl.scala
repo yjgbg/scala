@@ -81,7 +81,8 @@ trait JsonDsl:
   def writeFile(using prefix: Prefix)(path: String, content: String): Unit = {
     import java.nio.file.{Paths,Files}
     val p = Paths.get(prefix + path)
-    Files.createDirectories(p.getParent())
+    val parentPath = p.toAbsolutePath().getParent()
+    if (parentPath!=null)Files.createDirectories(parentPath)
     val writer = new java.io.FileWriter(prefix + path)
     writer.write(content)
     writer.flush()

@@ -21,7 +21,7 @@ class Endpoints(basePath: String):
       @description("描述")
       @validate(min(0L)) id: Long,
       @validate(maxLength(6)) name: String
-  )
+  ) derives Schema
   lazy val add = endpoint.post
     .in(basePath / "add" / sttp.tapir.path[String]("id"))
     .out(jsonBody[Todo])

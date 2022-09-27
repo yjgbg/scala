@@ -59,11 +59,11 @@ trait KubernetesStrictDsl extends JsonDsl:
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
     "restartPolicy" := policy
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
-    "volume" ::= {"name" := name;"emptyDir" ::= {}}
+    "volumes" ++= {"name" := name;"emptyDir" ::= {}}
   def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String):Unit = 
-    "volume" ::= {"name" := name;"configMap" ::= {"name" := configMap}}
+    "volumes" ++= {"name" := name;"configMap" ::= {"name" := configMap}}
   def volumeHostPath(using PodScope >> SpecScope) (name:String,hostPath:String) =
-    "volume" ::= {"name" := name;"hostPath" ::= {"path" := hostPath}}
+    "volumes" ++= {"name" := name;"hostPath" ::= {"path" := hostPath}}
   type ContainerScope[A] = Scope
   def initContainer(using PodScope >> SpecScope)
   (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
@@ -74,7 +74,7 @@ trait KubernetesStrictDsl extends JsonDsl:
     }
   def container(using PodScope >> SpecScope)
   (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
-    "initContainer" ++= {
+    "container" ++= {
       "name":= name
       "image":=image
       closure.apply
