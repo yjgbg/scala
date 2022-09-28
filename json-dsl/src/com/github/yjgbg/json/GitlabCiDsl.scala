@@ -1,11 +1,18 @@
 package com.github.yjgbg.json
 
 import scala.concurrent.duration.Duration
+import scala.annotation.implicitNotFound
 
 object GitlabCiDsl extends GitlabCiDsl
 trait GitlabCiDsl extends JsonDsl:
+  @implicitNotFound(msg ="this method invoke should in JobScope") 
   opaque type JobScope = Scope
+  @implicitNotFound(msg ="this method invoke should in GitlabCiScope") 
   opaque type GitlabCiScope = Scope
+  @implicitNotFound(msg ="this method invoke should in ArtifactScope") 
+  opaque type ArtifactScope = Scope
+  @implicitNotFound(msg ="this method invoke should in CacheScope") 
+  opaque type CacheScope = Scope
   val api = gitlab.api
   def gitlabCi(closure: GitlabCiScope ?=> Unit): Unit =
     writeYaml("gitlab-ci.sc.yml")(closure)
@@ -21,7 +28,8 @@ trait GitlabCiDsl extends JsonDsl:
   def allowFailure(using JobScope)(boolean: Boolean = true): Unit = "allow_failure" := boolean
   def allowFailure(using JobScope)(exitCodes: Int*): Unit =
     "allow_failure" ::= { exitCodes.foreach("exit_codes" += _.toLong) }
-  def artifacts(using JobScope)(paths: Seq[String], expireIn: Duration): Unit =
-    "artifacts" ::= { paths.foreach("paths" += _);"expire_in" := expireIn.toSeconds.toString}
-  def cache(using JobScope)(key:String, paths:String*):Unit = 
-    "cache" ::= {"key" := key;paths.foreach("paths" += _)}
+  def artifacts(using JobScope)(closure:ArtifactScope ?=> Unit):Unit = "artifacts" ::= closure
+  def expireIn(using ArtifactScope)(seconds:Int):Unit = "expire_in" := seconds.toString
+  def cache(using JobScope)(key:String)(closure: CacheScope ?=> Unit):Unit = 
+    "cache" ::= {"key" := key;closure.apply}
+  def paths(using ArtifactScope|CacheScope)(paths:String*):Unit = paths.foreach("paths" += _)
