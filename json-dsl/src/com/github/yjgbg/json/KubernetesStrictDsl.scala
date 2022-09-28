@@ -2,6 +2,10 @@ package com.github.yjgbg.json
 
 object KubernetesStrictDsl extends KubernetesStrictDsl,KubernetesStrictEnhenceDsl
 trait KubernetesStrictDsl extends JsonDsl:
+  def commonLabels(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) = 
+    interceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}(closure)
+  def commonAnnotations(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) =
+    interceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}(closure)
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
     prefix(value+"-") {interceptor{"metadata" ::= {"namespace" := value}}(closure)}
   opaque type >>[A,B[_]] = B[A]
