@@ -1,6 +1,9 @@
 package com.github.yjgbg.json
 
-object KubernetesStrictDsl extends KubernetesStrictDsl,KubernetesStrictEnhenceDsl
+object KubernetesStrictDsl extends 
+  KubernetesStrictDsl,
+  KubernetesStrictEnhenceDsl,
+  KubernetesStrictApplyDsl
 trait KubernetesStrictDsl extends JsonDsl:
   def commonLabels(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) = 
     interceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}(closure)
