@@ -61,7 +61,7 @@ trait KubernetesStrictDsl extends JsonDsl:
   def template[A <: (DeploymentScope >> SpecScope) | (JobScope >> SpecScope)]
   (using A)(closure: TemplateScope[A] ?=> Unit):Unit =
     "template" ::= closure
-  def suspend(using CronJobScope >> SpecScope)(boolean:Boolean = true) = "suspend" := true
+  def suspend(using CronJobScope >> SpecScope)(boolean:Boolean = true) = "suspend" := boolean
   def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
     "restartPolicy" := policy

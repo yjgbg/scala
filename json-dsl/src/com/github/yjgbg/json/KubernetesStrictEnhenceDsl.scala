@@ -10,7 +10,8 @@ trait KubernetesStrictEnhenceDsl:
       scriptPath: String, // 脚本文件路径
       schedule: String, // cron表达式
       suspend: Boolean  = false,
-      image: String = "reg2.hypers.cc/dockerhub/library/yjgbg/ammonite:2.5.4-3.2"
+      image: String = "reg2.hypers.cc/dockerhub/library/yjgbg/ammonite:2.5.4-3.2",
+      env:(String,String)*
   ): Unit = {
     val configMapName = s"cronjob-$name-script"
     val scriptFileName = "script.sc"
@@ -38,7 +39,8 @@ trait KubernetesStrictEnhenceDsl:
                   volumeMounts("coursiercache" -> "/coursiercache")
                   volumeMounts("scripts" -> workspace)
                   volumeMounts("cache" -> s"$workspace/.cache")
-                  env("COURSIER_CACHE" -> "/coursiercache")
+                  self.env("COURSIER_CACHE" -> "/coursiercache")
+                  env.foreach(self.env(_))
                 }
               }
             }
