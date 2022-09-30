@@ -2,6 +2,7 @@
   "editor.fontFamily": "'Jetbrains Mono'",
   "editor.fontLigatures": true, // 多字符连体
   "editor.scrollBeyondLastLine": false,
+  "editor.fontSize": 14,
   "files.watcherExclude": {
     "**/target": true,
     "**/.bloop": true,
