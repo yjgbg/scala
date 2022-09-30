@@ -3,7 +3,7 @@ package com.github.yjgbg.json
 trait KubernetesStrictApplyDsl:
   self: KubernetesStrictDsl =>
   
-  def context(name:String,apply:Boolean)(closure:Prefix ?=> Unit) = {
+  def context(name:String,apply:Boolean = false)(closure:Prefix ?=> Unit) = {
     import sys.process._
     s"rm -rf target/$name/".! // 清理掉工作区
     prefix(s"target/${name}/")(closure) // 生成文件
