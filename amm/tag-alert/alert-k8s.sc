@@ -6,7 +6,7 @@ namespace("has") {
   val name = "tag-alert"
   ammoniteCronJob(
     name = "tag-alert",
-    scriptPath = "cm/alert.sc",
+    scriptPath = "alert.sc",
     schedule = "1/3 * * * *",
     suspend = false
   )

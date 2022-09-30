@@ -1,4 +1,3 @@
-// Mill 0.10.7
 import $ivy.`com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION`
 
 import mill._
