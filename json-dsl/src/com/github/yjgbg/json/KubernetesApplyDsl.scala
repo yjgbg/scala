@@ -1,7 +1,7 @@
 package com.github.yjgbg.json
 
-trait KubernetesStrictApplyDsl:
-  self: KubernetesStrictDsl =>
+trait KubernetesApplyDsl:
+  self: KubernetesDsl =>
   
   def context(name:String,apply:Boolean = false)(closure:Prefix ?=> Unit) = {
     import sys.process._

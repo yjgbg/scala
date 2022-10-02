@@ -1,7 +1,7 @@
 package com.github.yjgbg.json
 
-trait KubernetesStrictEnhenceDsl:
-  self: KubernetesStrictDsl =>
+trait KubernetesEnhenceDsl:
+  self: KubernetesDsl =>
 
   // 会创建一个configmap用于存放脚本文件，一个cronJob会挂载configmap用于执行任务
   // 工作目录下的.cache目录是可以缓存的，缓存的键为该cronJob
