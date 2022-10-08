@@ -20,8 +20,8 @@ trait KubernetesEnhenceDsl:
       data(scriptFileName -> Files.readString(Path.of(scriptPath)))
     }
     cronJob(name) {
-      self.schedule(schedule)
       spec {
+        self.schedule(schedule)
         self.suspend(suspend)
         jobTemplate {
           spec { 
@@ -33,7 +33,7 @@ trait KubernetesEnhenceDsl:
                 volumeHostPath("coursiercache","/mnt/ammonite/coursiercache")
                 container(name,image){
                   val workspace = "/workspace"
-                  workDir(workspace)
+                  workingDir(workspace)
                   imagePullPolicy("IfNotPresent")
                   command("sh","-c",s"amm /script/$scriptFileName")
                   volumeMounts("coursiercache" -> "/coursiercache")

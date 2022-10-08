@@ -34,13 +34,13 @@ trait KubernetesDsl extends JsonDsl:
     }
   opaque type CronJobScope = Scope
   def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
-    interceptor{"kind" := "CronJob";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    interceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"cronjob-$name.yaml")(closure)
     }
-  def schedule(using CronJobScope)(cron:String):Unit = "schedule" := cron
+  def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
-    interceptor{"kind" := "ConfigMap";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
+    interceptor{"kind" := "ConfigMap";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"configmap-$name.yaml")(closure)
     }
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
@@ -63,6 +63,8 @@ trait KubernetesDsl extends JsonDsl:
     "template" ::= closure
   def suspend(using CronJobScope >> SpecScope)(boolean:Boolean = true) = "suspend" := boolean
   def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
+  def failedJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "failedJobsHistoryLimit" := int.toLong
+  def successfulJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "successfulJobsHistoryLimit" := int.toLong
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
     "restartPolicy" := policy
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
@@ -74,20 +76,20 @@ trait KubernetesDsl extends JsonDsl:
   type ContainerScope[A] = Scope
   def initContainer(using PodScope >> SpecScope)
   (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
-    "initContainer" ++= {
+    "initContainers" ++= {
       "name":= name
       "image":=image
       closure.apply
     }
   def container(using PodScope >> SpecScope)
   (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
-    "container" ++= {
+    "containers" ++= {
       "name":= name
       "image":=image
       closure.apply
     }
-  def workDir(using PodScope >> SpecScope >> ContainerScope)(path:String):Unit = 
-    "workDir" := path
+  def workingDir(using PodScope >> SpecScope >> ContainerScope)(path:String):Unit = 
+    "workingDir" := path
   def imagePullPolicy(using PodScope >> SpecScope >> ContainerScope)
   (value:"Always"|"IfNotPresent"|"Never") :Unit = 
     "imagePullPolicy" := value

@@ -20,14 +20,8 @@ trait KubernetesApplyDsl:
       s"kubectl config use-context ${name}".! // 切换上下文
       println(s"switch current context to ${name}")
       s"kubectl apply -f target/${name}".! // 应用yaml
-      listCyclic(Path.of(s"./target/${name}")).forEach(it => s"kubectl apply -f ${it.toString()}".!)
       println(s"execute succeed")
       s"kubectl config use-context ${currentContext}".! // 切换上下文
       println(s"switch current context to ${currentContext}")
     }
   }
-  private def listCyclic(path: Path): java.util.stream.Stream[Path] =
-    if (!Files.isDirectory(path)) java.util.stream.Stream.of(path)
-    else {
-      Files.list(path).flatMap(listCyclic(_))
-    }
