@@ -17,7 +17,7 @@ trait StdScalaModule extends ScalaModule with PublishModule {
     )
   }
 
-  override def publishVersion = "0.2-SNAPSHOT"
+  override def publishVersion = "0.4-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,
