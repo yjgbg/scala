@@ -17,11 +17,8 @@ trait KubernetesApplyDsl:
         .orElseThrow()
         .split(" ")
         .filter(!_.isBlank())(1) // 获取当前context
-      s"kubectl config use-context ${name}".! // 切换上下文
-      println(s"switch current context to ${name}")
+      if (currentContext != name) s"kubectl config use-context ${name}".! // 切换上下文
       s"kubectl apply -f target/${name}".! // 应用yaml
-      println(s"execute succeed")
-      s"kubectl config use-context ${currentContext}".! // 切换上下文
-      println(s"switch current context to ${currentContext}")
+      if (currentContext != name) s"kubectl config use-context ${currentContext}".! // 切换上下文
     }
   }

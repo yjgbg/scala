@@ -29,15 +29,16 @@ trait KubernetesEnhenceDsl:
               spec {
                 restartPolicy("Never")
                 volumeHostPath("cache",s"/mnt/cronJob/cache/$name")
-                volumeConfigMap("scripts",configMapName)
+                val scripts = "scripts"
+                volumeConfigMap(scripts,configMapName)
                 volumeHostPath("coursiercache","/mnt/ammonite/coursiercache")
                 container(name,image){
                   val workspace = "/workspace"
                   workingDir(workspace)
                   imagePullPolicy("IfNotPresent")
-                  command("sh","-c",s"amm /script/$scriptFileName")
+                  command("sh","-c",s"amm /$scripts/$scriptFileName")
                   volumeMounts("coursiercache" -> "/coursiercache")
-                  volumeMounts("scripts" -> workspace)
+                  volumeMounts(scripts -> s"/$scripts")
                   volumeMounts("cache" -> s"$workspace/.cache")
                   self.env("COURSIER_CACHE" -> "/coursiercache")
                   env.foreach(self.env(_))
