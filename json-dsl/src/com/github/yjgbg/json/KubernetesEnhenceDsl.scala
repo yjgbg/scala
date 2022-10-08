@@ -16,9 +16,9 @@ trait KubernetesEnhenceDsl:
       failedJobsHistoryLimit : Int = 5,
       env:(String,String)*
   ): Unit = {
-    val configMapName = s"cronjob-$name-script"
+    val resourceName = s"ammonite-cron-job-$name"
     val scriptFileName = "script.sc"
-    configMap(configMapName) {
+    configMap(resourceName) {
       import java.nio.file.{Files,Path}
       data(scriptFileName -> Files.readString(Path.of(scriptPath)))
       val ammDownloadPath = "/root/.ammonite/download"
@@ -38,7 +38,7 @@ trait KubernetesEnhenceDsl:
       |exec ${ammExecPath} "${"$"}@"
       """.stripMargin)
     }
-    cronJob(name) {
+    cronJob(resourceName) {
       spec {
         self.schedule(schedule)
         self.suspend(suspend)
@@ -51,7 +51,7 @@ trait KubernetesEnhenceDsl:
                 restartPolicy("Never")
                 volumeHostPath("cache",s"/mnt/cronJob/cache/$name")
                 val scripts = "scripts"
-                volumeConfigMap(scripts,configMapName)
+                volumeConfigMap(scripts,resourceName)
                 volumeHostPath("coursiercache","/mnt/ammonite/coursiercache")
                 volumeHostPath("ammonite","/mnt/ammonite/.ammonite/download")
                 container(name,image){
@@ -70,6 +70,67 @@ trait KubernetesEnhenceDsl:
             }
           }
         }
+      }
+    }
+  }
+
+  // 这是一个简单的web服务器，用于做静态服务，考虑给nginxConf一个默认值
+  def nginxStaticHttpApplication(using Prefix,Interceptor)(
+    name: String,
+    image: String,
+    dirPath: String, // 静态文件存储的目录，应该以斜杠结尾，会被复制到runtimeImage的同名目录中
+    nginxConf:String, // nginx 配置文件，可以使用环境变量，会经过envsubst处理
+    runtimeImage: String = "nginx:latest", // 运行时镜像
+    replicas:Int = 1,
+    tcpPort:Int = 80,
+    initScript: Seq[String] = Seq(), // 脚本，会在启动时按顺序执行
+    env:(String,String)* // 环境变量
+  ):Unit = {
+    val resourceName = s"nginx-static-http-application-$name"
+    val initScriptNameAndContent = initScript.zipWithIndex.map((script,index) => s"$index.scripts.sh" -> script)
+    // 声明configmap
+    val nginxConfTemplate = "nginx.conf.template"
+    val labels = "app" -> resourceName
+    configMap(resourceName) {
+      data(nginxConfTemplate -> nginxConf)
+      initScriptNameAndContent.foreach(it => data(it))
+    }
+    // 创建deployment
+    deployment(resourceName) {
+      spec {
+        self.replicas(replicas)
+        selectorMatchLabels(labels)
+        template {
+          self.labels(labels)
+          spec {
+            val www = "www"
+            // 声明一个空目录，用来存放静态资源文件
+            volumeEmptyDir(www)
+            // 声明一个存储nginxconfig的volume
+            volumeConfigMap(nginxConfTemplate,resourceName,nginxConfTemplate -> nginxConfTemplate)
+            initContainer("prepare-static-file",image) {
+              env.foreach((k,v) => self.env(k -> v))
+              command("cp",dirPath,s"/$www/")
+              volumeMounts(www -> s"/$www/")
+            }
+            container(resourceName,runtimeImage) {
+              volumeMounts(www -> dirPath)
+              volumeMounts(nginxConfTemplate -> "/etc/nginx/templates/")
+              env.foreach((k,v) => self.env(k -> v))
+              // 如果存在初始化脚本,则声明一个用来存储初始化脚本的卷,并挂载初始化脚本
+              if (!initScriptNameAndContent.isEmpty) {
+                volumeConfigMap("init-scripts",resourceName, initScriptNameAndContent.map((name,_) => name -> name):_*)
+                volumeMounts("init-scripts" -> "/docker-entrypoint.d/40-custom/") 
+              }
+            }
+          }
+        }
+      }
+    }
+    service(resourceName) {
+      spec {
+        selectorMatchLabels(labels)
+        tcpPorts(tcpPort -> tcpPort)
       }
     }
   }

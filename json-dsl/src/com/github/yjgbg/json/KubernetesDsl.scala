@@ -53,6 +53,29 @@ trait KubernetesDsl extends JsonDsl:
   opaque type SpecScope[A] = Scope
   def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope]
   (using A)(closure: A >> SpecScope ?=> Unit) = "spec" ::= closure
+  def selectorMatchLabels[A <: DeploymentScope|ServiceScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
+    if !labels.isEmpty then "selector" ::= {"matchLabels" ::= {labels.foreach((k,v) => k := v)}}
+  enum Expression:
+    case In(key:String,value:Seq[String]) extends Expression
+    case NotIn(key:String,value:Seq[String]) extends Expression
+    case Exists(key:String) extends Expression
+    case DoesNotExist(key:String) extends Expression
+  extension (key:String)
+    infix def in(value:Seq[String]):Expression.In = Expression.In(key,value)
+    infix def notIn(value:Seq[String]):Expression.NotIn = Expression.NotIn(key,value)
+    infix def exists = Expression.Exists(key)
+    infix def doesNotExist = Expression.DoesNotExist(key)
+
+  def selectorMatchExpression[A <: DeploymentScope|ServiceScope|JobScope](using A >> SpecScope)(expresions:Expression*) = 
+    if !expresions.isEmpty then "selector" ::= expresions.foreach(expression => {
+      "matchExpressions" ::= {
+        expression match
+          case Expression.In(key, value) => "key" := key;"operator" := "In"; value.foreach(v => "values" += v)
+          case Expression.NotIn(key, value) => "key" := key;"operator" := "NotIn"; value.foreach(v => "values" += v)
+          case Expression.Exists(key) => "key" := key;"operator" := "Exists"
+          case Expression.DoesNotExist(key) => "key" := key;"operator" := "DoesNotExist"
+      }
+    })
   def replicas(using DeploymentScope >> SpecScope)(int:Int) = "replicas" := int.toLong
   type TemplateScope[A] = A match 
     case JobScope >> SpecScope => PodScope
@@ -69,8 +92,18 @@ trait KubernetesDsl extends JsonDsl:
     "restartPolicy" := policy
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
     "volumes" ++= {"name" := name;"emptyDir" ::= {}}
-  def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String):Unit = 
-    "volumes" ++= {"name" := name;"configMap" ::= {"name" := configMap}}
+  // items 是一个key to path 的元组
+  def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String,items:(String,String)*):Unit = 
+    "volumes" ++= {
+      "name" := name;
+      "configMap" ::= {
+        "name" := configMap;
+        items.foreach((key,path) => "items" ++= {
+          "key" := key;
+          "path" := path
+        })
+      }
+    }
   def volumeHostPath(using PodScope >> SpecScope) (name:String,hostPath:String) =
     "volumes" ++= {"name" := name;"hostPath" ::= {"path" := hostPath}}
   type ContainerScope[A] = Scope
@@ -111,16 +144,16 @@ trait KubernetesDsl extends JsonDsl:
   (memory:Long,cpu:Int) = "limit" ::= {"memory" := s"${memory}Gi";"cpu":=cpu.toLong}
   def request(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
   (memory:Long,cpu:Int) = "request" ::= {"memory" := s"${memory}Gi";"cpu":=cpu.toLong}
-  def tcpPorts(using PodScope >> SpecScope >> ContainerScope)
-  (values:(Int,String)*) = values.foreach((port,name) => "ports" ++= {
-    "containerPort" := port.toLong
-    "name" := name
+  def tcpPorts(using ServiceScope >> SpecScope)
+  (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
+    "port" := port.toLong
+    "targetPort" := targetPort.toLong
     "protocol" := "tcp"
   })
-  def udpPorts(using PodScope >> SpecScope >> ContainerScope)
-  (values:(Int,String)*) = values.foreach((port,name) => "ports" ++= {
-    "containerPort" := port.toLong
-    "name" :=  name
+  def udpPorts(using ServiceScope >> SpecScope)
+  (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
+    "port" := port.toLong
+    "targetPort" := targetPort.toLong
     "protocol" := "udp"
   })
 
