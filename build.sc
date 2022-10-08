@@ -58,9 +58,3 @@ object `tapir-zhttp-server` extends StdScalaModule {
     ivy"com.softwaremill.sttp.apispec::openapi-circe-yaml:0.2.1"
   )
 }
-
-object `protobuf-example` extends ScalaPBModule with StdScalaModule {
- override def scalaPBVersion = "0.11.11"
- override def scalaPBGrpc = true
- override def scalaPBFlatPackage = true
-}
