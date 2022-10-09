@@ -16,7 +16,7 @@ trait KubernetesEnhenceDsl:
       failedJobsHistoryLimit : Int = 5,
       env:(String,String)*
   ): Unit = {
-    val resourceName = s"ammonite-cron-job-$name"
+    val resourceName = s"$name-ammonite-cron-job"
     val scriptFileName = "script.sc"
     configMap(resourceName) {
       import java.nio.file.{Files,Path}
@@ -86,7 +86,7 @@ trait KubernetesEnhenceDsl:
     initScript: Seq[String] = Seq(), // 脚本，会在启动时按顺序执行
     env:(String,String)* // 环境变量
   ):Unit = {
-    val resourceName = s"nginx-static-http-application-$name"
+    val resourceName = s"$name-nginx-static-http-application"
     val initScriptNameAndContent = initScript.zipWithIndex.map((script,index) => s"$index.scripts.sh" -> script)
     // 声明configmap
     val nginxConfTemplate = "nginx.conf.template"

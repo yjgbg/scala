@@ -15,33 +15,33 @@ trait KubernetesDsl extends JsonDsl:
   opaque type DeploymentScope = Scope
   def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
     interceptor{"kind" := "Deployment";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"deployment-$name.yaml")(closure)
+      writeYaml(s"$name-deployment.yaml")(closure)
     }
   opaque type ServiceScope = Scope
   def service(using Interceptor,Prefix)(name:String)(closure:ServiceScope ?=> Unit):Unit = 
     interceptor{"kind" := "Service";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"service-$name.yaml")(closure)
+      writeYaml(s"$name-service.yaml")(closure)
     }
   opaque type PodScope = Scope
   def pod(using Interceptor,Prefix)(name:String)(closure:PodScope ?=> Unit):Unit = 
     interceptor{"kind" := "Pod";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"pod-$name.yaml")(closure)
+      writeYaml(s"$name-pod.yaml")(closure)
     }
   opaque type JobScope = Scope
   def job(using Interceptor,Prefix)(name:String)(closure:JobScope ?=> Unit):Unit = 
     interceptor{"kind" := "Job";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"job-$name.yaml")(closure)
+      writeYaml(s"$name-job.yaml")(closure)
     }
   opaque type CronJobScope = Scope
   def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
     interceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"cronjob-$name.yaml")(closure)
+      writeYaml(s"$name-cronjob.yaml")(closure)
     }
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
     interceptor{"kind" := "ConfigMap";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
-      writeYaml(s"configmap-$name.yaml")(closure)
+      writeYaml(s"$name-configmap.yaml")(closure)
     }
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
     values.foreach((k,v) => k := v)
