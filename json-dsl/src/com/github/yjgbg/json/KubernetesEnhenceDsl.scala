@@ -93,7 +93,7 @@ trait KubernetesEnhenceDsl:
     val labels = "app" -> resourceName
     configMap(resourceName) {
       data(nginxConfTemplate -> nginxConf)
-      initScriptNameAndContent.foreach(it => data(it))
+      initScriptNameAndContent.foreach(data(_))
     }
     // 创建deployment
     deployment(resourceName) {
