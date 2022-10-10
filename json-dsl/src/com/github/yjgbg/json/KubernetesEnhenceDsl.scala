@@ -109,6 +109,13 @@ trait KubernetesEnhenceDsl:
             volumeEmptyDir(www)
             // 声明一个存储nginxconfig的volume
             volumeConfigMap(nginxConfTemplate, resourceName, nginxConfTemplate -> nginxConfTemplate)
+            if (!initScriptNameAndContent.isEmpty) {
+              volumeConfigMap(
+                "init-scripts",
+                resourceName,
+                initScriptNameAndContent.map((name, _) => name -> name): _*
+              )
+            }
             initContainer("prepare-static-file", image) {
               env.foreach((k, v) => self.env(k -> v))
               command("cp", dirPath, s"/$www/")
@@ -120,11 +127,6 @@ trait KubernetesEnhenceDsl:
               env.foreach((k, v) => self.env(k -> v))
               // 如果存在初始化脚本,则声明一个用来存储初始化脚本的卷,并挂载初始化脚本
               if (!initScriptNameAndContent.isEmpty) {
-                volumeConfigMap(
-                  "init-scripts",
-                  resourceName,
-                  initScriptNameAndContent.map((name, _) => name -> name): _*
-                )
                 volumeMounts("init-scripts" -> "/docker-entrypoint.d/40-custom/")
               }
             }
