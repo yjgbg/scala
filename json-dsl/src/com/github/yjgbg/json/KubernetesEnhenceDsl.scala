@@ -75,10 +75,10 @@ trait KubernetesEnhenceDsl:
     }
   }
   // 端口映射
-  def portForward(using Prefix, Interceptor)(name:String,ip:String,ports:(Int,Int)*): Unit = 
+  def portForward(using Prefix, Interceptor)(name:String,ip:String,local2Remote:(Int,Int)*): Unit = 
       pod(name) {
         spec {
-          ports.foreach((remotePort,localPort) => {
+          local2Remote.foreach((localPort,remotePort) => {
             container(localPort.toString(),"marcnuri/port-forward") {
             env(
               "REMOTE_HOST" -> ip,
