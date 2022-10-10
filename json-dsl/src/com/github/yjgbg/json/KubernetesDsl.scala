@@ -37,6 +37,15 @@ trait KubernetesDsl extends JsonDsl:
     interceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-cronjob.yaml")(closure)
     }
+  opaque type PersistenceVolumeClaimScope = Scope
+  def persistenceVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistenceVolumeClaimScope ?=> Unit) =
+    interceptor{
+      "kind" := "PersistenceVolumeClaim";
+      "apiVersion" := "v1";
+      "metadata" ::= {"name" := name}
+    } {
+      writeYaml(s"$name-persistence-volume-claim.yaml")(closure)
+    }
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
@@ -46,13 +55,18 @@ trait KubernetesDsl extends JsonDsl:
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
     values.foreach((k,v) => k := v)
   }
-  def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope)
+  def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope)
     (values:(String,String)*) = "metadata" ::= {"labels" ::= {values.foreach(_ := _)}}
-  def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope)
+  def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope)
     (values:(String,String)*) = "metadata" ::= {"annotations" ::= {values.foreach(_ := _)}}
   opaque type SpecScope[A] = Scope
-  def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope]
+  def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope]
   (using A)(closure: A >> SpecScope ?=> Unit) = "spec" ::= closure
+  def storageClassName(using PersistenceVolumeClaimScope >> SpecScope)(name:String) = 
+    "storageClassName" := name
+  def accessModes(using PersistenceVolumeClaimScope >> SpecScope)
+  (values:("ReadWriteOnce"|"ReadOnlyMany"|"ReadWriteMany"|"ReadWriteOncePod")*) = 
+    values.foreach("accessModes" += _)
   def selectorMatchLabels[A <: DeploymentScope|ServiceScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
     if !labels.isEmpty then "selector" ::= {"matchLabels" ::= {labels.foreach((k,v) => k := v)}}
   enum Expression:
