@@ -74,6 +74,21 @@ trait KubernetesEnhenceDsl:
       }
     }
   }
+  // 端口映射
+  def portForward(using Prefix, Interceptor)(name:String,ip:String,ports:(Int,Int)*): Unit = 
+      pod(name) {
+        spec {
+          ports.foreach((remotePort,localPort) => {
+            container(localPort.toString(),"marcnuri/port-forward") {
+            env(
+              "REMOTE_HOST" -> ip,
+              "REMOTE_PORT" -> remotePort.toString(),
+              "LOCAL_PORT" -> localPort.toString()
+              )
+          }
+          })
+        }
+      }
 
   // 这是一个简单的web服务器，用于做静态服务，考虑给nginxConf一个默认值
   def nginxStaticHttpApplication(using Prefix, Interceptor)(
