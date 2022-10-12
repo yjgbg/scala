@@ -164,13 +164,19 @@ trait KubernetesDsl extends JsonDsl:
   (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
     "port" := port.toLong
     "targetPort" := targetPort.toLong
-    "protocol" := "tcp"
+    "protocol" := "TCP"
   })
   def udpPorts(using ServiceScope >> SpecScope)
   (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
     "port" := port.toLong
     "targetPort" := targetPort.toLong
-    "protocol" := "udp"
+    "protocol" := "UDP"
+  })
+  def sctpPorts(using ServiceScope >> SpecScope)
+  (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
+    "port" := port.toLong
+    "targetPort" := targetPort.toLong
+    "protocol" := "SCTP"
   })
 
 
