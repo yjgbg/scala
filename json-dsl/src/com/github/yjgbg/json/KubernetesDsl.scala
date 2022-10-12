@@ -14,7 +14,7 @@ trait KubernetesDsl extends JsonDsl:
   opaque type >>[A,B[_]] = B[A]
   opaque type DeploymentScope = Scope
   def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
-    interceptor{"kind" := "Deployment";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    interceptor{"kind" := "Deployment";"apiVersion" := "apps/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-deployment.yaml")(closure)
     }
   opaque type ServiceScope = Scope
@@ -67,7 +67,9 @@ trait KubernetesDsl extends JsonDsl:
   def accessModes(using PersistenceVolumeClaimScope >> SpecScope)
   (values:("ReadWriteOnce"|"ReadOnlyMany"|"ReadWriteMany"|"ReadWriteOncePod")*) = 
     values.foreach("accessModes" += _)
-  def selectorMatchLabels[A <: DeploymentScope|ServiceScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
+  def selector(using ServiceScope >> SpecScope)(labels:(String,String)*) = 
+    if !labels.isEmpty then "selector" ::= {labels.foreach((k,v) => k := v)}
+  def selectorMatchLabels[A <: DeploymentScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
     if !labels.isEmpty then "selector" ::= {"matchLabels" ::= {labels.foreach((k,v) => k := v)}}
   enum Expression:
     case In(key:String,value:Seq[String]) extends Expression

@@ -164,7 +164,7 @@ trait KubernetesEnhenceDsl:
     }
     service(resourceName) {
       spec {
-        selectorMatchLabels(labels)
+        selector(labels)
         tcpPorts(80 -> 80)
       } 
     }
@@ -229,7 +229,7 @@ trait KubernetesEnhenceDsl:
     }
     service(resourceName) {
       spec {
-        selectorMatchLabels(labels)
+        selector(labels)
         ports.foreach(it => tcpPorts(it -> it))
       }
     }
