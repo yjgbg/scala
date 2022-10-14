@@ -5,8 +5,8 @@ trait KubernetesEnhenceDsl:
 
   def shellCronJob(using Prefix,Interceptor)(
     name: String, // 名字
-    script: String, // 脚本内容
     schedule: String, // cron表达式
+    script: String, // 脚本内容
     suspend: Boolean = false,
     image: String = "busybox",
     successfulJobsHistoryLimit: Int = 3,
@@ -56,8 +56,8 @@ trait KubernetesEnhenceDsl:
     */
   def ammoniteCronJob(using Prefix, Interceptor)(
       name: String, // 名字
-      script: String, // 脚本内容
       schedule: String, // cron表达式
+      script: String, // 脚本内容
       suspend: Boolean = false,
       image: String = "eclipse-temurin:17-jdk",
       scalaVersion: String = "3.2",
