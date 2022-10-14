@@ -206,43 +206,21 @@ trait KubernetesEnhenceDsl:
   }
 
   /**
-    * 
     *
     * @param name 名字
     * @param conf 配置文件内容
     * @param image 镜像tag
+    * @param initImage  如果你的网络无法拉取到该镜像，那么覆盖这个参数，否则不应该改动这个参数
     * @param ports 端口号
-    */
-  def simpleNginxServer(using Prefix, Interceptor)(
-    name:String,
-    conf:String,
-    image:String = "nginx:latest",
-    ports:Seq[Int] = Seq(80)
-  ) = nginxServer(name,Map("nginx.conf" -> conf),image,ports,Map())
-
-  /**
-    * 这个主要用途是做代理,一般而言，配置name以及一个conf文件即可
-    *
-    * @param name
-    * @param conf 配置文件名和内容的映射，会添加.template后缀，然后被放到/etc/nginx/templates/目录下，
-    * 再经由nginx启动时候的envsubst渲染环境变量，到/etc/nginx/conf.d目录，可以用美元符号使用环境变量
-    * @param image
-    * @param ports
-    * @param env
     */
   def nginxServer(using Prefix, Interceptor)(
     name:String,
-    conf:Map[String,String] = Map(), // 配置文件名和内容，会被放到/etc/nginx/templates/目录下，可以使用环境变量
+    conf:String,
     image:String = "nginx:latest",
-    ports:Seq[Int] = Seq(80),
-    env:Map[String,String] = Map()
+    initImage:String = "alpine:latest",
+    ports:Seq[Int] = Seq(80)
   ) : Unit = {
     val resourceName = s"$name-nginx-gateway"
-    if(!conf.isEmpty) {
-      configMap(resourceName) {
-        conf.foreach((k,v) => data(s"${k}.template" -> v))
-      }
-    }
     val labels = "app" -> resourceName
     deployment(resourceName) {
       spec {
@@ -250,13 +228,14 @@ trait KubernetesEnhenceDsl:
         template{
           self.labels(labels)
           spec {
-            if (!conf.isEmpty) {
-              volumeConfigMap("config",resourceName)
-              container("container",image) {
-                volumeMounts("config" -> "/etc/nginx/templates/")
-              }
-            } else {
-              container("container",image) {}
+            volumeEmptyDir("config")
+            initContainer("echo",initImage) {
+              volumeMounts("config" -> "/config")
+              env("FILE" -> conf)
+              command("sh","-c", """echo "${FILE}" > /config/nginx.conf""")
+            }
+            container("container",image) {
+              volumeMounts("config" -> "/etc/nginx/conf.d/")
             }
           }
         }
