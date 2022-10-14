@@ -163,7 +163,7 @@ trait KubernetesEnhenceDsl:
     runtimeImage:String = "nginx:latest",
     init:String*
   ): Unit = {
-    val resourceName = s"$name-static-file-http-server"
+    val resourceName = s"$name-simple-static-file-http-server"
     val labels = "app" -> resourceName
     if (!init.isEmpty) {
       configMap(resourceName) {
@@ -178,17 +178,17 @@ trait KubernetesEnhenceDsl:
         template{
           self.labels(labels)
           spec {
-            val www = "www"
-            volumeEmptyDir(www)
+            val files = "files"
+            volumeEmptyDir(files)
             if(!init.isEmpty) {
               volumeConfigMap("script" ,resourceName)
             }
             initContainer("prepare-file",image) {
-              volumeMounts(www -> s"/$www/")
-              command("cp", dirPath, s"/$www/")
+              volumeMounts(files -> s"/files")
+              command("cp","-r", dirPath, s"/files/html")
             }
             container("app","nginx:latest") {
-              volumeMounts(www -> "/usr/share/nginx/html")
+              volumeMounts(files -> "/usr/share/nginx")
               if (!init.isEmpty) {
                 volumeMounts("script" -> "/docker-entrypoint.d/40-custom/")
               }
