@@ -5,12 +5,12 @@ trait KubernetesEnhenceDsl:
 
   def shellCronJob(using Prefix,Interceptor)(
     name: String, // 名字
-      script: String, // 脚本内容
-      schedule: String, // cron表达式
-      suspend: Boolean = false,
-      image: String = "busybox",
-      successfulJobsHistoryLimit: Int = 3,
-      failedJobsHistoryLimit: Int = 5,
+    script: String, // 脚本内容
+    schedule: String, // cron表达式
+    suspend: Boolean = false,
+    image: String = "busybox",
+    successfulJobsHistoryLimit: Int = 3,
+    failedJobsHistoryLimit: Int = 5,
   ):Unit = {
     val resourceName = s"$name-shell-cron-job"
     cronJob(resourceName) {
