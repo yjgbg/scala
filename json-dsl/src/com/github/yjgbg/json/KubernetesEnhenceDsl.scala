@@ -2,6 +2,41 @@ package com.github.yjgbg.json
 
 trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
+
+  def shellCronJob(using Prefix,Interceptor)(
+    name: String, // 名字
+      script: String, // 脚本内容
+      schedule: String, // cron表达式
+      suspend: Boolean = false,
+      image: String = "busybox",
+      successfulJobsHistoryLimit: Int = 3,
+      failedJobsHistoryLimit: Int = 5,
+  ):Unit = {
+    val resourceName = s"$name-shell-cron-job"
+    cronJob(resourceName) {
+      spec {
+        self.schedule(schedule)
+        self.suspend(suspend)
+        self.successfulJobsHistoryLimit(successfulJobsHistoryLimit)
+        self.failedJobsHistoryLimit(failedJobsHistoryLimit)
+        jobTemplate {
+          spec {
+            template {
+              spec {
+                container(resourceName,image) {
+                  val workspace = "/workspace"
+                  workingDir(workspace)
+                  imagePullPolicy("IfNotPresent")
+                  command("sh","-c",script)
+                  volumeMounts("cache" -> s"$workspace/.cache")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   /**
     * 基于ammonite和cronjob的cronJob资源
     * 会创建一个configmap用于存放脚本文件，一个cronJob会挂载configmap用于执行任务
