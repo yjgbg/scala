@@ -5,10 +5,10 @@ object KubernetesDsl extends
   KubernetesEnhenceDsl,
   KubernetesApplyDsl
 trait KubernetesDsl extends JsonDsl:
-  def commonLabels(using Interceptor)(values:(String,String)*):Interceptor = 
-    interceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}
-  def commonAnnotations(using Interceptor)(values:(String,String)*):Interceptor =
-    interceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}
+  def commonLabels(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) = 
+    withInterceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}(closure)
+  def commonAnnotations(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) =
+    withInterceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}(closure)
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
     prefix(value+"-") {withInterceptor{"metadata" ::= {"namespace" := value}}(closure)}
   opaque type >>[A,B[_]] = B[A]
