@@ -5,41 +5,41 @@ object KubernetesDsl extends
   KubernetesEnhenceDsl,
   KubernetesApplyDsl
 trait KubernetesDsl extends JsonDsl:
-  def commonLabels(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) = 
-    interceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}(closure)
-  def commonAnnotations(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) =
-    interceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}(closure)
+  def commonLabels(using Interceptor)(values:(String,String)*):Interceptor = 
+    interceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}
+  def commonAnnotations(using Interceptor)(values:(String,String)*):Interceptor =
+    interceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
-    prefix(value+"-") {interceptor{"metadata" ::= {"namespace" := value}}(closure)}
+    prefix(value+"-") {withInterceptor{"metadata" ::= {"namespace" := value}}(closure)}
   opaque type >>[A,B[_]] = B[A]
   opaque type DeploymentScope = Scope
   def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
-    interceptor{"kind" := "Deployment";"apiVersion" := "apps/v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Deployment";"apiVersion" := "apps/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-deployment.yaml")(closure)
     }
   opaque type ServiceScope = Scope
   def service(using Interceptor,Prefix)(name:String)(closure:ServiceScope ?=> Unit):Unit = 
-    interceptor{"kind" := "Service";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Service";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-service.yaml")(closure)
     }
   opaque type PodScope = Scope
   def pod(using Interceptor,Prefix)(name:String)(closure:PodScope ?=> Unit):Unit = 
-    interceptor{"kind" := "Pod";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Pod";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-pod.yaml")(closure)
     }
   opaque type JobScope = Scope
   def job(using Interceptor,Prefix)(name:String)(closure:JobScope ?=> Unit):Unit = 
-    interceptor{"kind" := "Job";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Job";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-job.yaml")(closure)
     }
   opaque type CronJobScope = Scope
   def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
-    interceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-cronjob.yaml")(closure)
     }
   opaque type PersistenceVolumeClaimScope = Scope
   def persistenceVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistenceVolumeClaimScope ?=> Unit) =
-    interceptor{
+    withInterceptor{
       "kind" := "PersistenceVolumeClaim";
       "apiVersion" := "v1";
       "metadata" ::= {"name" := name}
@@ -49,7 +49,7 @@ trait KubernetesDsl extends JsonDsl:
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
-    interceptor{"kind" := "ConfigMap";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "ConfigMap";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-configmap.yaml")(closure)
     }
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
