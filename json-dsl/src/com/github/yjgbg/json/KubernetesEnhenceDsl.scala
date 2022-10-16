@@ -3,10 +3,21 @@ package com.github.yjgbg.json
 trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
 
+  /**
+    * 工作目录下的.cache目录是可以缓存的，缓存的键为该cronJob名字
+    *
+    * @param name 名字
+    * @param schedule cron表达式
+    * @param script 脚本内容
+    * @param suspend 是否停止
+    * @param image 镜像名，默认为busybox
+    * @param successfulJobsHistoryLimit 保存的成功job数量，默认3
+    * @param failedJobsHistoryLimit 保存的失败job数量，默认5
+    */
   def shellCronJob(using Prefix,Interceptor)(
-    name: String, // 名字
-    schedule: String, // cron表达式
-    script: String, // 脚本内容
+    name: String,
+    schedule: String,
+    script: String,
     suspend: Boolean = false,
     image: String = "busybox",
     successfulJobsHistoryLimit: Int = 3,
@@ -23,6 +34,7 @@ trait KubernetesEnhenceDsl:
           spec {
             template {
               spec {
+                volumeHostPath("cache",s"/mnt/shellCronJob/cache/$name")
                 container(resourceName,image) {
                   val workspace = "/workspace"
                   workingDir(workspace)
