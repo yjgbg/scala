@@ -22,6 +22,45 @@ trait KubernetesDsl extends JsonDsl:
     withInterceptor{"kind" := "Service";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-service.yaml")(closure)
     }
+  def tcpNodePort(using Interceptor,Prefix)(nodePort:Int|Null =null ,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+      spec {
+        "type" := "NodePort"
+        this.selector(selector:_*)
+        "ports" ++= {
+          "protocol" := "TCP"
+          "targetPort" := targetPort.toLong
+          "port" := targetPort.toLong
+          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+        }
+      }
+    }
+  def udpNodePort(using Interceptor,Prefix)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+      spec {
+        "type" := "NodePort"
+        this.selector(selector:_*)
+        "ports" ++= {
+          "protocol" := "UDP"
+          "targetPort" := targetPort.toLong
+          "port" := targetPort.toLong
+          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+        }
+      }
+    }
+  def sctpNodePort(using Interceptor,Prefix)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+      spec {
+        "type" := "NodePort"
+        this.selector(selector:_*)
+        "ports" ++= {
+          "protocol" := "SCTP"
+          "targetPort" := targetPort.toLong
+          "port" := targetPort.toLong
+          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+        }
+      }
+    }
   opaque type PodScope = Scope
   def pod(using Interceptor,Prefix)(name:String)(closure:PodScope ?=> Unit):Unit = 
     withInterceptor{"kind" := "Pod";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
