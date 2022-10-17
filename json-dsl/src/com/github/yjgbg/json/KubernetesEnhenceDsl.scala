@@ -148,10 +148,11 @@ trait KubernetesEnhenceDsl:
         spec {
           local2Remote.foreach((localPort,remotePort) => {
             container(localPort.toString(),"marcnuri/port-forward") {
-            env(
-              "REMOTE_HOST" -> ip,
-              "REMOTE_PORT" -> remotePort.toString(),
-              "LOCAL_PORT" -> localPort.toString()
+              imagePullPolicy("IfNotPresent")
+              env(
+                "REMOTE_HOST" -> ip,
+                "REMOTE_PORT" -> remotePort.toString(),
+                "LOCAL_PORT" -> localPort.toString()
               )
             }
           })
@@ -172,7 +173,7 @@ trait KubernetesEnhenceDsl:
     name:String,
     image:String,
     dirPath:String, // 需要以斜杠结尾
-    runtimeImage:String = "nginx:latest",
+    runtimeImage:String = "nginx:alpine",
     init:String*
   ): Unit = {
     val resourceName = s"$name-simple-static-file-http-server"
@@ -196,10 +197,12 @@ trait KubernetesEnhenceDsl:
               volumeConfigMap("script" ,resourceName)
             }
             initContainer("prepare-file",image) {
+              imagePullPolicy("IfNotPresent")
               volumeMounts(files -> s"/files")
               command("cp","-r", dirPath, s"/files/html")
             }
-            container("app","nginx:latest") {
+            container("app","nginx:alpine") {
+              imagePullPolicy("IfNotPresent")
               volumeMounts(files -> "/usr/share/nginx")
               if (!init.isEmpty) {
                 volumeMounts("script" -> "/docker-entrypoint.d/40-custom/")
@@ -228,11 +231,11 @@ trait KubernetesEnhenceDsl:
   def nginxServer(using Prefix, Interceptor)(
     name:String,
     conf:String,
-    image:String = "nginx:latest",
+    image:String = "nginx:alpine",
     initImage:String = "alpine:latest",
     ports:Seq[Int] = Seq(80)
   ) : Unit = {
-    val resourceName = s"$name-nginx-gateway"
+    val resourceName = s"$name-nginx-server"
     val labels = "app" -> resourceName
     deployment(resourceName) {
       spec {
@@ -242,11 +245,13 @@ trait KubernetesEnhenceDsl:
           spec {
             volumeEmptyDir("config")
             initContainer("echo",initImage) {
+              imagePullPolicy("IfNotPresent")
               volumeMounts("config" -> "/config")
               env("FILE" -> conf)
               command("sh","-c", """echo "${FILE}" > /config/nginx.conf""")
             }
             container("container",image) {
+              imagePullPolicy("IfNotPresent")
               volumeMounts("config" -> "/etc/nginx/conf.d/")
             }
           }
