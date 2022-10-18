@@ -12,7 +12,7 @@ trait KubernetesEnhenceDsl:
     * @param suspend 是否停止
     * @param image 镜像名，默认为busybox
     * @param successfulJobsHistoryLimit 保存的成功job数量，默认3
-    * @param failedJobsHistoryLimit 保存的失败job数量，默认5
+    * @param failedJobsHistoryLimit 保存的失败job数量，默认1
     */
   def shellCronJob(using Prefix,Interceptor)(
     name: String,
@@ -21,7 +21,7 @@ trait KubernetesEnhenceDsl:
     suspend: Boolean = false,
     image: String = "busybox",
     successfulJobsHistoryLimit: Int = 3,
-    failedJobsHistoryLimit: Int = 5,
+    failedJobsHistoryLimit: Int = 1,
   ):Unit = {
     val resourceName = s"$name-shell-cron-job"
     cronJob(resourceName) {
@@ -63,7 +63,7 @@ trait KubernetesEnhenceDsl:
     * @param scalaVersion scala版本，默认3.2，取决于你的脚本期待的运行环境
     * @param ammVersion ammonite版本，默认2.5.4，取决于你的脚本期待的运行环境
     * @param successfulJobsHistoryLimit 保存的成功job数量，默认3
-    * @param failedJobsHistoryLimit 保存的失败job数量，默认5
+    * @param failedJobsHistoryLimit 保存的失败job数量，默认1
     * @param env 环境变量
     */
   def ammoniteCronJob(using Prefix, Interceptor)(
@@ -75,7 +75,7 @@ trait KubernetesEnhenceDsl:
       scalaVersion: String = "3.2",
       ammVersion: String = "2.5.4-33-0af04a5b",
       successfulJobsHistoryLimit: Int = 3,
-      failedJobsHistoryLimit: Int = 5,
+      failedJobsHistoryLimit: Int = 1,
       env: (String, String)*
   ): Unit = {
     val resourceName = s"$name-ammonite-cron-job"
@@ -146,16 +146,14 @@ trait KubernetesEnhenceDsl:
   def portForward(using Prefix, Interceptor)(name:String,ip:String,local2Remote:(Int,Int)*): Unit = 
       pod(name) {
         spec {
-          local2Remote.foreach((localPort,remotePort) => {
-            container(localPort.toString(),"marcnuri/port-forward") {
-              imagePullPolicy("IfNotPresent")
-              env(
-                "REMOTE_HOST" -> ip,
-                "REMOTE_PORT" -> remotePort.toString(),
-                "LOCAL_PORT" -> localPort.toString()
-              )
-            }
-          })
+          for ((localPort,remotePort) <- local2Remote) container(localPort.toString,"marcnuri/port-forward") {
+            imagePullPolicy("IfNotPresent")
+            env(
+              "REMOTE_HOST" -> ip,
+              "REMOTE_PORT" -> remotePort.toString(),
+              "LOCAL_PORT" -> localPort.toString()
+            )
+          }
         }
       }
 
