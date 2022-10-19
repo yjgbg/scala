@@ -199,7 +199,7 @@ trait KubernetesEnhenceDsl:
               volumeMounts(files -> s"/files")
               command("cp","-r", dirPath, s"/files/html")
             }
-            container("app","nginx:alpine") {
+            container("app",runtimeImage) {
               imagePullPolicy("IfNotPresent")
               volumeMounts(files -> "/usr/share/nginx")
               if (!init.isEmpty) {
