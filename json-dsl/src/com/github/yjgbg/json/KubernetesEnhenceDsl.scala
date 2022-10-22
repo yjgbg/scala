@@ -49,6 +49,63 @@ trait KubernetesEnhenceDsl:
       }
     }
   }
+
+  private def ammoniteJob(ammVersion:String,scalaVersion:String,cacheKey:String = null,
+                          script:String,image:String,env:Seq[(String,String)],
+                          initImage:String = "alpine:latest"):JobScope ?=> Unit = {
+    spec { 
+      template {
+        spec {
+          val ammDownloadPath = "/root/.ammonite/download"
+          val ammExecPath = s"$ammDownloadPath/${ammVersion}_$scalaVersion"
+          val downloadFile = s"$ammExecPath-tmp-download"
+          val ammDownloadUrl =
+            s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
+          //这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
+          val amm = s"""
+            |#!/usr/bin/env sh
+            |if [ ! -x "$ammExecPath" ] ; then
+            |  mkdir -p $ammDownloadPath
+            |  curl --fail -L -o "$downloadFile" "$ammDownloadUrl"
+            |  chmod +x "$downloadFile"
+            |  mv "$downloadFile" "$ammExecPath"
+            |fi
+            |exec ${ammExecPath} "${"$"}@"
+            |""".stripMargin
+          restartPolicy("Never")
+          if (cacheKey!=null) volumeHostPath("cache",cacheKey)
+          val scripts = "scripts"
+          volumeEmptyDir(scripts)
+          volumeHostPath("coursiercache","/mnt/ammonite/coursiercache")
+          volumeHostPath("ammonite","/mnt/ammonite/.ammonite/download")
+          initContainer("init",initImage) {
+            imagePullPolicy("IfNotPresent")
+            volumeMounts(scripts -> s"/$scripts")
+            self.env("SCRIPT" -> script)
+            self.env("AMM" -> amm)
+            command("sh","-c", raw"""
+              |echo "${"$"}{SCRIPT}" > /$scripts/script.sc
+              |echo "${"$"}{AMM} > /$scripts/amm.sc"
+              |""".stripMargin)
+          }
+          container("work",image){
+            val workspace = "/workspace"
+            workingDir(workspace)
+            imagePullPolicy("IfNotPresent")
+            volumeMounts("coursiercache" -> "/coursiercache")
+            volumeMounts("ammonite" -> "/root/.ammonite/download")
+            self.env("COURSIER_CACHE" -> "/coursiercache")
+            if(cacheKey!=null) volumeMounts("cache" -> s"$workspace/.cache")
+            volumeMounts(scripts -> s"$workspace/$scripts")
+            command("sh","-c",raw"""
+              |./${scripts}/amm",s"/$scripts/script.sc
+              |
+              |""".stripMargin)
+          }
+        }
+      }
+    }
+  }
   /**
     * 基于ammonite和cronjob的cronJob资源
     * 会创建一个configmap用于存放脚本文件，一个cronJob会挂载configmap用于执行任务
@@ -72,35 +129,13 @@ trait KubernetesEnhenceDsl:
       script: String, // 脚本内容
       suspend: Boolean = false,
       image: String = "eclipse-temurin:17-jdk",
-      scalaVersion: String = "3.2",
-      ammVersion: String = "2.5.4-33-0af04a5b",
+      scalaVersion: String,
+      ammVersion: String,
       successfulJobsHistoryLimit: Int = 3,
       failedJobsHistoryLimit: Int = 1,
       env: (String, String)*
   ): Unit = {
     val resourceName = s"$name-ammonite-cron-job"
-    val scriptFileName = "script.sc"
-    configMap(resourceName) {
-      import java.nio.file.{Files, Path}
-      data(scriptFileName -> script)
-      val ammDownloadPath = "/root/.ammonite/download"
-      val ammExecPath = s"$ammDownloadPath/${ammVersion}_$scalaVersion"
-      val shortAmmVersion = ammVersion.split("-")(0)
-      val downloadFile = s"$ammExecPath-tmp-download"
-      val ammDownloadUrl =
-        s"https://github.com/lihaoyi/ammonite/releases/download/${shortAmmVersion}/$scalaVersion-$ammVersion"
-      // 这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
-      data("amm" -> s"""
-      |#!/usr/bin/env sh
-      |if [ ! -x "$ammExecPath" ] ; then
-      |  mkdir -p $ammDownloadPath
-      |  curl --fail -L -o "$downloadFile" "$ammDownloadUrl"
-      |  chmod +x "$downloadFile"
-      |  mv "$downloadFile" "$ammExecPath"
-      |fi
-      |exec ${ammExecPath} "${"$"}@"
-      """.stripMargin)
-    }
     cronJob(resourceName) {
       spec {
         self.schedule(schedule)
@@ -108,30 +143,7 @@ trait KubernetesEnhenceDsl:
         self.successfulJobsHistoryLimit(successfulJobsHistoryLimit)
         self.failedJobsHistoryLimit(failedJobsHistoryLimit)
         jobTemplate {
-          spec { 
-            template {
-              spec {
-                restartPolicy("Never")
-                volumeHostPath("cache",s"/mnt/cronJob/cache/$name")
-                val scripts = "scripts"
-                volumeConfigMap(scripts,resourceName)
-                volumeHostPath("coursiercache","/mnt/ammonite/coursiercache")
-                volumeHostPath("ammonite","/mnt/ammonite/.ammonite/download")
-                container(name,image){
-                  val workspace = "/workspace"
-                  workingDir(workspace)
-                  imagePullPolicy("IfNotPresent")
-                  command("sh",s"./../${scripts}/amm",s"/$scripts/$scriptFileName")
-                  volumeMounts("coursiercache" -> "/coursiercache")
-                  volumeMounts(scripts -> s"/$scripts")
-                  volumeMounts("cache" -> s"$workspace/.cache")
-                  volumeMounts("ammonite" -> "/root/.ammonite/download")
-                  self.env("COURSIER_CACHE" -> "/coursiercache")
-                  env.foreach(self.env(_))
-                }
-              }
-            }
-          }
+          ammoniteJob(ammVersion,scalaVersion,s"/mnt/cronJob/cache/$name",script,image,env,"alpine:latest")
         }
       }
     }
@@ -146,14 +158,15 @@ trait KubernetesEnhenceDsl:
   def portForward(using Prefix, Interceptor)(name:String,ip:String,local2Remote:(Int,Int)*): Unit = 
       pod(name) {
         spec {
-          for ((localPort,remotePort) <- local2Remote) container(localPort.toString,"marcnuri/port-forward") {
-            imagePullPolicy("IfNotPresent")
-            env(
-              "REMOTE_HOST" -> ip,
-              "REMOTE_PORT" -> remotePort.toString(),
-              "LOCAL_PORT" -> localPort.toString()
-            )
-          }
+          for ((localPort,remotePort) <- local2Remote) 
+            container(localPort.toString,"marcnuri/port-forward") {
+              imagePullPolicy("IfNotPresent")
+              env(
+                "REMOTE_HOST" -> ip,
+                "REMOTE_PORT" -> remotePort.toString(),
+                "LOCAL_PORT" -> localPort.toString()
+              )
+            }
         }
       }
 
@@ -170,7 +183,7 @@ trait KubernetesEnhenceDsl:
   def simpleStaticFileHttpServer(using Prefix,Interceptor)(
     name:String,
     image:String,
-    dirPath:String, // 需要以斜杠结尾
+    dirPath:String,
     runtimeImage:String = "nginx:alpine",
     init:String*
   ): Unit = {
@@ -285,10 +298,9 @@ trait KubernetesEnhenceDsl:
       group: String,
       name: String,
       value: String,
-      schedule: String = "1/3 * * * *"
-  ) = ammoniteCronJob(
-    name = name +"-nacos-config",
-    script = raw"""
+      `type`:String,
+  ) = job(name +"-nacos-config"){
+    val script = raw"""
         |// 登录
         |val loginResponse = requests.post(s"$host/nacos/v1/auth/login?username=$username&password=$password").text()
         |val accessToken = ujson.read(loginResponse)("accessToken").str
@@ -296,16 +308,20 @@ trait KubernetesEnhenceDsl:
         |val namespaceListResponse = requests.get(s"$host/nacos/v1/console/namespaces?accessToken=${"$"}accessToken").text()
         |val exist = ujson.read(namespaceListResponse)("data").arr
         |  .map(_("namespace").str).find(_ == ${namespace}).isDefined
-        |if(!exist) requests.post(s"$host/nacos/v1/console/namespaces?accessToken=${"$"}accessToken&customNamespaceId=&namespaceName=$namespace&namespaceDesc=")
+        |if(!exist) requests.post(url = s"$host/nacos/v1/console/namespaces",params = Map(
+        |  "accessToken" -> accessToken,
+        |  "namespaceName" -> "$namespace"
+        |)
         |// 将data目录下所有文件写入到目标nacos的目标命名空间
-        |requests.post(s"$host/nacos/v1/cs/configs?accessToken=${"$"}accessToken",data = Seq(
-        |  "tenant" -> "$namespace",
-        |  "dataId" -> "$name",
-        |  "group" -> "$group",
-        |//  "type" -> p.ext,
-        |  "content" -> sys.env("value")
+        |requests.post(url = s"$host/nacos/v1/cs/configs",
+        |  params = Map("accessToken" -> accessToken),
+        |  data = Seq(
+        |    "tenant" -> "$namespace",
+        |    "dataId" -> "$name",
+        |    "group" -> "$group",
+        |    "type" -> "${`type`}",
+        |    "content" -> sys.env("value")
         |))
-        """.stripMargin,
-    schedule = schedule,
-    env = "value" -> value
-  )
+        """.stripMargin
+    ammoniteJob("2.5.4-33-0af04a5b","3.2",null,script,"eclipse-temurin:17-jdk",Seq("value" -> value))
+  }

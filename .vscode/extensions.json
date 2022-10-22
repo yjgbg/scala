@@ -1,8 +1,6 @@
 {
   "recommendations": [
-    "pkief.material-icon-theme",
     "scalameta.metals",
-    "scala-lang.scala",
-    "github.github-vscode-theme"
+    "scala-lang.scala"
   ]
 }
