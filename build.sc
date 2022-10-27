@@ -17,7 +17,7 @@ trait StdScalaModule extends ScalaModule with PublishModule {
     )
   }
 
-  override def publishVersion = "0.4-SNAPSHOT"
+  override def publishVersion = "0.7-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,
@@ -37,24 +37,15 @@ object `json-dsl` extends StdScalaModule {
     ivy"io.circe::circe-core:$circeVersion",
     ivy"io.circe::circe-generic:$circeVersion",
     ivy"io.circe::circe-parser:$circeVersion",
-    ivy"io.circe::circe-yaml:$circeVersion",
-    ivy"org.scalikejdbc::scalikejdbc:4.0.0",
-    ivy"com.softwaremill.sttp.tapir::tapir-sttp-client:1.1.1"
+    ivy"io.circe::circe-yaml:$circeVersion"
   )
 }
 
-object `tapir-zhttp-server` extends StdScalaModule {
+object `api-definition` extends StdScalaModule {
   override def ivyDeps = Agg(
-    ivy"com.softwaremill.sttp.tapir::tapir-zio-http-server:1.1.0",
     ivy"com.softwaremill.sttp.tapir::tapir-openapi-docs:1.1.0",
     ivy"com.softwaremill.sttp.tapir::tapir-json-circe:1.1.0",
-    ivy"io.circe::circe-core:$circeVersion",
-    ivy"io.circe::circe-generic:$circeVersion",
-    ivy"io.circe::circe-parser:$circeVersion",
-    ivy"io.circe::circe-yaml:$circeVersion",
-    ivy"com.softwaremill.sttp.tapir::tapir-zio:1.1.0",
-    ivy"com.softwaremill.sttp.tapir::tapir-zio-http-server:1.1.0",
     ivy"com.softwaremill.sttp.tapir::tapir-openapi-circe-yaml:1.0.0-M9",
-    ivy"com.softwaremill.sttp.apispec::openapi-circe-yaml:0.2.1"
+    ivy"eu.timepit::refined:0.10.1"
   )
 }

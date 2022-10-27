@@ -62,7 +62,7 @@ trait KubernetesEnhenceDsl:
           val ammDownloadUrl =
             s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
           //这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
-          val amm = s"""
+          val amm = raw"""
             |#!/usr/bin/env sh
             |if [ ! -x "$ammExecPath" ] ; then
             |  mkdir -p $ammDownloadPath
@@ -71,7 +71,7 @@ trait KubernetesEnhenceDsl:
             |  mv "$downloadFile" "$ammExecPath"
             |fi
             |exec ${ammExecPath} "${"$"}@"
-            |""".stripMargin
+            |""".stripMargin.stripLeading.stripTrailing
           restartPolicy("Never")
           if (cacheKey!=null) volumeHostPath("cache",cacheKey)
           val scripts = "scripts"
@@ -84,9 +84,9 @@ trait KubernetesEnhenceDsl:
             self.env("SCRIPT" -> script)
             self.env("AMM" -> amm)
             command("sh","-c", raw"""
-              |echo "${"$"}{SCRIPT}" > /$scripts/script.sc
-              |echo "${"$"}{AMM} > /$scripts/amm.sc"
-              |""".stripMargin)
+            |echo "${"$"}{SCRIPT}" > /$scripts/script.sc
+            |echo "${"$"}{AMM} > /$scripts/amm.sc"
+            |""".stripMargin.stripLeading.stripTrailing)
           }
           container("work",image){
             val workspace = "/workspace"
@@ -97,10 +97,7 @@ trait KubernetesEnhenceDsl:
             self.env("COURSIER_CACHE" -> "/coursiercache")
             if(cacheKey!=null) volumeMounts("cache" -> s"$workspace/.cache")
             volumeMounts(scripts -> s"$workspace/$scripts")
-            command("sh","-c",raw"""
-              |./${scripts}/amm",s"/$scripts/script.sc
-              |
-              |""".stripMargin)
+            command("sh","-c",s"./${scripts}/amm /$scripts/script.sc")
           }
         }
       }
@@ -322,6 +319,6 @@ trait KubernetesEnhenceDsl:
         |    "type" -> "${`type`}",
         |    "content" -> sys.env("value")
         |))
-        """.stripMargin
+        |""".stripMargin.stripLeading.stripTrailing
     ammoniteJob("2.5.4-33-0af04a5b","3.2",null,script,"eclipse-temurin:17-jdk",Seq("value" -> value))
   }
