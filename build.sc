@@ -10,17 +10,14 @@ import mill.scalajslib.ScalaJSModule
 import contrib.scalapblib._
 trait StdScalaModule extends ScalaModule with PublishModule {
   override def scalaVersion: T[String] = "3.2.0"
-
-  override def repositoriesTask: Task[Seq[Repository]] = T.task {
-    super.repositoriesTask() ++ Seq(
-      MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
-    )
-  }
+  // override def sonatypeUri = "https://nexus3.hypers.cc/repository/orca"
+  // override def publishVersion = "0.7"
 
   override def publishVersion = "0.7-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,
+    // organization = "com.hypers.weicl",
     organization = "com.github.yjgbg",
     url = "https://github.com/yjgbg/scala",
     licenses = Seq(License.MIT),

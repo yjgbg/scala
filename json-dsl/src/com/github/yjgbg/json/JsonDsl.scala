@@ -58,10 +58,8 @@ trait JsonDsl:
       scope.json = plus(scope.json, Json.obj(key -> Json.arr(json(closure))))
   opaque type Interceptor = Scope ?=> Unit
   given Interceptor = {}
-  def interceptor(using Interceptor)(in: Scope ?=> Unit):Interceptor =
-    {summon[Interceptor].apply;in.apply}
   def withInterceptor(using Interceptor)(in: Scope ?=> Unit)(closure: Interceptor ?=> Unit): Unit =
-    closure(using interceptor(in))
+    closure(using {summon[Interceptor].apply;in.apply})
   def json(using in: Interceptor)(closure: Scope ?=> Unit): Json =
     val scope = Scope(Json.obj())
     in(using scope)
