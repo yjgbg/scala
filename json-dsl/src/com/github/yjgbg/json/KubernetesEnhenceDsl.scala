@@ -85,7 +85,7 @@ trait KubernetesEnhenceDsl:
             self.env("AMM" -> amm)
             command("sh","-c", raw"""
             |echo "${"$"}{SCRIPT}" > /$scripts/script.sc
-            |echo "${"$"}{AMM} > /$scripts/amm.sc"
+            |echo "${"$"}{AMM}" > /$scripts/amm.sc
             |""".stripMargin.stripLeading.stripTrailing)
           }
           container("work",image){
@@ -182,16 +182,11 @@ trait KubernetesEnhenceDsl:
     image:String,
     dirPath:String,
     runtimeImage:String = "nginx:alpine",
+    conf:String|Null = null,
     init:String*
   ): Unit = {
     val resourceName = s"$name-simple-static-file-http-server"
     val labels = "app" -> resourceName
-    if (!init.isEmpty) {
-      configMap(resourceName) {
-        for ((script,index) <- init.zipWithIndex)
-          data(s"${index}.script.sh" -> script)
-      }
-    }
     deployment(resourceName) {
       spec{
         replicas(1)
@@ -201,20 +196,28 @@ trait KubernetesEnhenceDsl:
           spec {
             val files = "files"
             volumeEmptyDir(files)
-            if(!init.isEmpty) {
-              volumeConfigMap("script" ,resourceName)
-            }
+            if(!init.isEmpty) volumeEmptyDir("script")
+            if(conf!=null) volumeEmptyDir("conf")
             initContainer("prepare-file",image) {
               imagePullPolicy("IfNotPresent")
               volumeMounts(files -> s"/files")
-              command("cp","-r", dirPath, s"/files/html")
+              if(conf!=null) volumeMounts("conf" -> "/etc/nginx/templates")
+              val indexes = 0 until init.length
+              if(conf!=null) env(s"CONF" -> conf)
+              for (i <- indexes) env(s"INIT_SCRIPT_$i" -> init(i)) // 将环境变量注入文件
+              if (!init.isEmpty) volumeMounts("script" -> "/docker-entrypoint.d/40-custom")
+              command("sh","-c",raw"""
+              |cp -r $dirPath /files/html
+              |${indexes.map(i => s"echo \"${"$"}INIT_SCRIPT_$i\" > /docker-entrypoint.d/40-custom/$i-script.sh").mkString("\n")}
+              |${indexes.map(i => s"chmod -R a+x /docker-entrypoint.d/40-custom/$i-script.sh").mkString("\n")}
+              |${if conf!=null then "echo \"${CONF}\" > /etc/nginx/templates/default.conf.template" else ""}
+              """.stripMargin.stripLeading.stripTrailing)
             }
             container("app",runtimeImage) {
               imagePullPolicy("IfNotPresent")
               volumeMounts(files -> "/usr/share/nginx")
-              if (!init.isEmpty) {
-                volumeMounts("script" -> "/docker-entrypoint.d/40-custom/")
-              }
+              if(conf!=null) volumeMounts("conf" -> "/etc/nginx/templates")
+              if (!init.isEmpty) volumeMounts("script" -> "/docker-entrypoint.d/40-custom")
             }
           }
         }
