@@ -40,8 +40,10 @@ trait JsonDsl:
         ))
       )
     @targetName("::=")
-    def ::=(using scope: Scope)(closure: Scope ?=> Unit): Unit =
-      scope.json = plus(scope.json, Json.obj(key -> json(closure)))
+    def ::=(using scope: Scope)(closure: Scope ?=> Unit): Unit = {
+      val x = Json.obj(key -> json(closure))
+      scope.json = plus(scope.json, x)
+    }
     @targetName("+=")
     def +=(using scope: Scope)(value: String | Boolean | Double | Long): Unit =
       scope.json = plus(
@@ -54,8 +56,10 @@ trait JsonDsl:
         ))
       )
     @targetName("++=")
-    def ++=(using scope: Scope)(closure: Scope ?=> Unit): Unit =
-      scope.json = plus(scope.json, Json.obj(key -> Json.arr(json(closure))))
+    def ++=(using scope: Scope)(closure: Scope ?=> Unit): Unit = {
+      val x =  Json.obj(key -> Json.arr(json(closure)))
+      scope.json = plus(scope.json,x)
+    }
   opaque type Interceptor = Scope ?=> Unit
   given Interceptor = {}
   def withInterceptor(using Interceptor)(in: Scope ?=> Unit)(closure: Interceptor ?=> Unit): Unit =

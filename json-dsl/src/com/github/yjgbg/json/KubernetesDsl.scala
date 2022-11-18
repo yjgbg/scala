@@ -5,10 +5,6 @@ object KubernetesDsl extends
   KubernetesEnhenceDsl,
   KubernetesApplyDsl
 trait KubernetesDsl extends JsonDsl:
-  def commonLabels(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) = 
-    withInterceptor {"metadata" ::= {"labels" ::= {values.foreach((k,v) => k := v)}}}(closure)
-  def commonAnnotations(using Interceptor)(values:(String,String)*)(closure:Interceptor ?=> Unit) =
-    withInterceptor {"metadata" ::= {"annotations" ::= {values.foreach((k,v) => k := v)}}}(closure)
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
     prefix(value+"-") {withInterceptor{"metadata" ::= {"namespace" := value}}(closure)}
   opaque type >>[A,B[_]] = B[A]
@@ -148,19 +144,30 @@ trait KubernetesDsl extends JsonDsl:
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
     "volumes" ++= {"name" := name;"emptyDir" ::= {}}
   // items 是一个key to path 的元组
-  def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String,items:(String,String)*):Unit = 
+  def volumeConfigMap(using PodScope >> SpecScope)(name:String,configMap:String = null,items:(String,String)*):Unit = 
     "volumes" ++= {
-      "name" := name;
+      "name" := name
       "configMap" ::= {
-        "name" := configMap;
+        "name" := (if configMap == null then name else configMap)
         items.foreach((key,path) => "items" ++= {
-          "key" := key;
+          "key" := key
           "path" := path
         })
       }
     }
-  def volumeHostPath(using PodScope >> SpecScope) (name:String,hostPath:String) =
-    "volumes" ++= {"name" := name;"hostPath" ::= {"path" := hostPath}}
+    
+  /**
+    *
+    * @param name pvc的名字，也会是该卷的名字
+    */
+  def volumePVC(using PodScope >> SpecScope)(name:String,pvcName:String = null)= 
+    "volumes" ++= {
+      "name" := name
+      "persistentVolumeClaim" ::= {
+        "claimName" := (if pvcName !=null then pvcName else name)
+      }
+    }
+
   type ContainerScope[A] = Scope
   def initContainer(using PodScope >> SpecScope)
   (name:String,image:String)(closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit =
@@ -192,13 +199,30 @@ trait KubernetesDsl extends JsonDsl:
     "volumeMounts" ++= {"name" := name;"mountPath" := mountPath}
   }
   opaque type ResourceScope[_] = Scope
-  def resources(using PodScope >> SpecScope >> ContainerScope)
-  (closure: PodScope >> SpecScope >> ContainerScope >> ResourceScope ?=> Unit) = 
+  def resources[A <: (PodScope >> SpecScope >> ContainerScope)|(PersistenceVolumeClaimScope >> SpecScope)]
+  (using A)(closure: A >> ResourceScope ?=> Unit) = 
     "resources" ::= closure
-  def limit(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
-  (memory:Long,cpu:Int) = "limit" ::= {"memory" := s"${memory}Gi";"cpu":=cpu.toLong}
-  def request(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
-  (memory:Long,cpu:Int) = "request" ::= {"memory" := s"${memory}Gi";"cpu":=cpu.toLong}
+  def cpu(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)(req2Limit:(Double,Double)) = {
+    "requests" ::= {"cpu" := req2Limit._1.toString()}
+    "limits" ::= {"cpu" := req2Limit._2.toString()}
+  }
+  /**
+    * @param req2Limit 单位: 兆(MB)
+    */
+  def memory(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)(req2Limit:(Long,Long)) = {
+    "requests" ::= {"memory" := s"${req2Limit._1}M"}
+    "limits" ::= {"memory" := s"${req2Limit._2}M"}
+  }
+    /**
+    * @param req2Limit 单位: 吉(Gi)
+    */
+  def storage(using PersistenceVolumeClaimScope >> SpecScope >> ResourceScope)(request:Long) = {
+    "requests" ::= {"storage" := s"${request}Gi"}
+  }
+  def limits(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
+  (cpu:Int,memory:Long) = "limits" ::= {"memory" := s"${memory}M";"cpu":=s"${cpu}m"}
+  def requests(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
+  (cpu:Int,memory:Long) = "requests" ::= {"memory" := s"${memory}M";"cpu":=s"${cpu}m"}
   def tcpPorts(using ServiceScope >> SpecScope)
   (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
     "port" := port.toLong
