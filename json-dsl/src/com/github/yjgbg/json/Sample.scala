@@ -4,7 +4,12 @@ object Sample {
   @main def main = {
     import KubernetesDsl.*
     namespace("default") {
-      state("xxx")
+      pod("") {
+        spec {
+          delegate("mysql",3306)
+        }
+      }
+      simplePVC("xxx")
       deployment("gateway") {
         labels("app" -> "gateway")
         spec {

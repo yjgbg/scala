@@ -2,7 +2,7 @@ package com.github.yjgbg.json
 
 trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
-  def state(using interceptor:Interceptor,prefix:Prefix)
+  def simplePVC(using interceptor:Interceptor,prefix:Prefix)
   (name:String,size:Long = 5,storageClass:String = null) = // 创建一个pvc
     persistenceVolumeClaim(name) {
       spec {
@@ -37,3 +37,16 @@ trait KubernetesEnhenceDsl:
         command("sh","-c",cmds.mkString("\n"))
       }
     }
+  def delegate(using PodScope >> SpecScope)(
+    ip:String,
+    port:Int,
+    localPort:Int|Null = null,
+    image:String = "marcnuri/port-forward"
+  )= container(if localPort != null then localPort.toString() else port.toString(),image) {
+    imagePullPolicy("IfNotPresent")
+    env(
+      "REMOTE_HOST" -> ip,
+      "REMOTE_PORT" -> port.toString(),
+      "LOCAL_PORT" -> (if localPort != null then localPort else port).toString()
+    )
+  }

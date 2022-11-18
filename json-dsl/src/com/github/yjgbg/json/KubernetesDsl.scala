@@ -155,11 +155,7 @@ trait KubernetesDsl extends JsonDsl:
         })
       }
     }
-    
-  /**
-    *
-    * @param name pvc的名字，也会是该卷的名字
-    */
+
   def volumePVC(using PodScope >> SpecScope)(name:String,pvcName:String = null)= 
     "volumes" ++= {
       "name" := name
