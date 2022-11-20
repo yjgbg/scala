@@ -237,9 +237,3 @@ trait KubernetesDsl extends JsonDsl:
     "targetPort" := targetPort.toLong
     "protocol" := "SCTP"
   })
-
-
-
-
-
-

@@ -3,45 +3,51 @@ package com.github.yjgbg.json
 object Sample {
   @main def main = {
     import KubernetesDsl.*
-    namespace("default") {
-      pod("") {
-        spec {
-          delegate("mysql",3306)
+    prefix("target/xx/") {
+      namespace("default") {
+        pod("xxx") {
+          spec {
+            proxy("mysql", 3306)
+          }
         }
-      }
-      simplePVC("xxx")
-      deployment("gateway") {
-        labels("app" -> "gateway")
-        spec {
-          selectorMatchLabels("app" -> "gateway")
-          template {
-            labels("app" -> "gateway")
-            spec {
-              volumeFromLiterial(name = "conf",files = Map(
+        simplePVC("xxx")
+        deployment("gateway") {
+          labels("app" -> "gateway")
+          spec {
+            selectorMatchLabels("app" -> "gateway")
+            template {
+              labels("app" -> "gateway")
+              spec {
+                volumePVC("xxx")
+                volumeFromImage("www", "reg2.hypers.cc/has-frontend:latest", "/usr/share/nginx/www/")
+                volumeFromLiterialText("conf",
                 "nginx.conf" -> """
-                |server {
-                |  listen 80;
-                |  location / {
-                |    
-                |  }
-                |}
-                """.stripMargin.stripLeading().stripTrailing()
-              ))
-              volumePVC("xxx")
-              volumeFromImage("www","reg2.hypers.cc/has-frontend","/usr/share/nginx/www/")
-              container("app","nginx:alpine") {
-                volumeMounts("www" -> "/usr/share/nginx/www")
-                volumeMounts("conf" -> "/etc/nginx/conf.d/")
-                volumeMounts("xxx" -> "/tmp")
+                  |server {
+                  |  listen 80;
+                  |  location / {
+                  |    
+                  |  }
+                  |}
+                  |""".stripMargin.stripLeading().stripIndent())
+                volumeFromLiterialText(
+                  "scripts",
+                  "0.script.sh" -> "echo 'hello' > /hello.txt"
+                )
+                container("app", "nginx:alpine") {
+                  volumeMounts("www" -> "/usr/share/nginx/www")
+                  env("k0" -> "v0")
+                  volumeMounts("conf" -> "/etc/nginx/conf.d/")
+                  volumeMounts("scripts" -> "/entrypoint.d/40.custom/")
+                }
               }
             }
           }
         }
-      }
-      service("gateway") {
-        spec {
-          selector("app" -> "gateway")
-          tcpPorts(80 -> 80)
+        service("gateway") {
+          spec {
+            selector("app" -> "gateway")
+            tcpPorts(80 -> 80)
+          }
         }
       }
     }
