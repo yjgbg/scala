@@ -44,7 +44,6 @@ trait KubernetesEnhenceDsl:
     }
   }
   def volumeFromLiterialText(using (PodScope >> SpecScope),UtilsImage)(name:String,files:(String,String)*): Unit = {
-    import scala.util.hashing.MurmurHash3 as hash
     volumeEmptyDir(name)
     initContainer(name,summon[UtilsImage]) {
       val variables = files.distinctBy(_._1)
