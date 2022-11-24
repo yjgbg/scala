@@ -7,9 +7,9 @@ trait KubernetesEnhenceDsl:
   def utilsImage(image:String):UtilsImage = image
   def simplePVC(using interceptor:Interceptor,prefix:Prefix)
   (name:String,size:Long = 5,storageClass:String = null) = // 创建一个pvc
-    persistenceVolumeClaim(name) {
+    persistentVolumeClaim(name) {
       spec {
-        accessModes("ReadWriteMany")
+        accessModes("ReadWriteOnce")
         if storageClass!=null then storageClassName(storageClass)
         resources {
           storage(size)
@@ -32,7 +32,7 @@ trait KubernetesEnhenceDsl:
     port:Int,
     localPort:Int|Null = null,
     image:String = "marcnuri/port-forward"
-  )= {
+  ) = {
     val localPort0 = (if localPort != null then localPort else port).toString()
     container(localPort0,image) {
       imagePullPolicy("IfNotPresent")
@@ -46,11 +46,13 @@ trait KubernetesEnhenceDsl:
   def volumeFromLiterialText(using (PodScope >> SpecScope),UtilsImage)(name:String,files:(String,String)*): Unit = {
     volumeEmptyDir(name)
     initContainer(name,summon[UtilsImage]) {
-      val variables = files.distinctBy(_._1)
-      env(variables:_*)
+      val indexAndKeyAndValues = files.distinctBy(_._1)
+        .zipWithIndex.map((k,v) => (v,k))
+        .map((k,v) => ("variable_"+k.toString(),v))
+      env(indexAndKeyAndValues.map((k,v) => (k,v._2)):_*)
       volumeMounts(name -> "/literial")
-      val cmds = for ((k,v) <- variables) yield 
-        s"""echo "${"$"}{${k}}" > /literial/$k"""
+      val cmds = for ((k,v) <- indexAndKeyAndValues) yield 
+        s"""echo "${"$"}{${k}}" > /literial/${v._1}"""
       command("sh","-c",cmds.mkString("\n"))
     }
   }

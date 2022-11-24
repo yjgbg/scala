@@ -67,19 +67,22 @@ trait KubernetesDsl extends JsonDsl:
     withInterceptor{"kind" := "Job";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-job.yaml")(closure)
     }
+  def backoffLimit(using JobScope >> SpecScope)(int:Int):Unit = {
+    "backoffLimit" := int.toLong
+  }
   opaque type CronJobScope = Scope
   def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
     withInterceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-cronjob.yaml")(closure)
     }
-  opaque type PersistenceVolumeClaimScope = Scope
-  def persistenceVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistenceVolumeClaimScope ?=> Unit) =
+  opaque type PersistentVolumeClaimScope = Scope
+  def persistentVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistentVolumeClaimScope ?=> Unit) =
     withInterceptor{
-      "kind" := "PersistenceVolumeClaim";
+      "kind" := "PersistentVolumeClaim";
       "apiVersion" := "v1";
       "metadata" ::= {"name" := name}
     } {
-      writeYaml(s"$name-persistence-volume-claim.yaml")(closure)
+      writeYaml(s"$name-persistent-volume-claim.yaml")(closure)
     }
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
@@ -90,16 +93,16 @@ trait KubernetesDsl extends JsonDsl:
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
     values.foreach((k,v) => k := v)
   }
-  def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope)
+  def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope)
     (values:(String,String)*) = "metadata" ::= {"labels" ::= {values.foreach(_ := _)}}
-  def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope)
+  def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope)
     (values:(String,String)*) = "metadata" ::= {"annotations" ::= {values.foreach(_ := _)}}
   opaque type SpecScope[A] = Scope
-  def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistenceVolumeClaimScope]
+  def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope]
   (using A)(closure: A >> SpecScope ?=> Unit) = "spec" ::= closure
-  def storageClassName(using PersistenceVolumeClaimScope >> SpecScope)(name:String) = 
+  def storageClassName(using PersistentVolumeClaimScope >> SpecScope)(name:String) = 
     "storageClassName" := name
-  def accessModes(using PersistenceVolumeClaimScope >> SpecScope)
+  def accessModes(using PersistentVolumeClaimScope >> SpecScope)
   (values:("ReadWriteOnce"|"ReadOnlyMany"|"ReadWriteMany"|"ReadWriteOncePod")*) = 
     values.foreach("accessModes" += _)
   def selector(using ServiceScope >> SpecScope)(labels:(String,String)*) = 
@@ -195,7 +198,7 @@ trait KubernetesDsl extends JsonDsl:
     "volumeMounts" ++= {"name" := name;"mountPath" := mountPath}
   }
   opaque type ResourceScope[_] = Scope
-  def resources[A <: (PodScope >> SpecScope >> ContainerScope)|(PersistenceVolumeClaimScope >> SpecScope)]
+  def resources[A <: (PodScope >> SpecScope >> ContainerScope)|(PersistentVolumeClaimScope >> SpecScope)]
   (using A)(closure: A >> ResourceScope ?=> Unit) = 
     "resources" ::= closure
   def cpu(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)(req2Limit:(Double,Double)) = {
@@ -212,7 +215,7 @@ trait KubernetesDsl extends JsonDsl:
     /**
     * @param req2Limit 单位: 吉(Gi)
     */
-  def storage(using PersistenceVolumeClaimScope >> SpecScope >> ResourceScope)(request:Long) = {
+  def storage(using PersistentVolumeClaimScope >> SpecScope >> ResourceScope)(request:Long) = {
     "requests" ::= {"storage" := s"${request}Gi"}
   }
   def limits(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
