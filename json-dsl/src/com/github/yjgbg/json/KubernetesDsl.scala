@@ -1,21 +1,35 @@
 package com.github.yjgbg.json
 
+import java.util.concurrent.atomic.AtomicReference
+
 object KubernetesDsl extends 
   KubernetesDsl,
   KubernetesEnhenceDsl,
   KubernetesApplyDsl
 trait KubernetesDsl extends JsonDsl:
+  opaque type VerMan = AtomicReference[Map[String,String]]
+  given VerMan = new AtomicReference(Map(
+    "Deployment" -> "apps/v1",
+    "Service" -> "v1",
+    "Pod" -> "v1",
+    "Job" -> "v1",
+    "CronJob" -> "batch/v1",
+    "PersistentVolumeClaim" -> "v1",
+    "ConfigMap" -> "v1"
+  ))
+  protected def version(resourceName:String):String = summon[VerMan].get()(resourceName)
+  def declareVersion(seq:(String,String)*) = summon[VerMan].getAndUpdate(_ ++ seq)
   def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
     prefix(value+"-") {withInterceptor{"metadata" ::= {"namespace" := value}}(closure)}
   opaque type >>[A,B[_]] = B[A]
   opaque type DeploymentScope = Scope
   def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Deployment";"apiVersion" := "apps/v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Deployment";"apiVersion" := version("Deployment");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-deployment.yaml")(closure)
     }
   opaque type ServiceScope = Scope
   def service(using Interceptor,Prefix)(name:String)(closure:ServiceScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Service";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Service";"apiVersion" := version("Service");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-service.yaml")(closure)
     }
   def tcpNodePort(using Interceptor,Prefix)(nodePort:Int|Null =null ,targetPort:Int,selector:(String,String)*) = 
@@ -59,12 +73,12 @@ trait KubernetesDsl extends JsonDsl:
     }
   opaque type PodScope = Scope
   def pod(using Interceptor,Prefix)(name:String)(closure:PodScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Pod";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Pod";"apiVersion" := version("Pod");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-pod.yaml")(closure)
     }
   opaque type JobScope = Scope
   def job(using Interceptor,Prefix)(name:String)(closure:JobScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Job";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "Job";"apiVersion" := version("Job");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-job.yaml")(closure)
     }
   def backoffLimit(using JobScope >> SpecScope)(int:Int):Unit = {
@@ -72,14 +86,14 @@ trait KubernetesDsl extends JsonDsl:
   }
   opaque type CronJobScope = Scope
   def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "CronJob";"apiVersion" := "batch/v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "CronJob";"apiVersion" := version("CronJob");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-cronjob.yaml")(closure)
     }
   opaque type PersistentVolumeClaimScope = Scope
   def persistentVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistentVolumeClaimScope ?=> Unit) =
     withInterceptor{
       "kind" := "PersistentVolumeClaim";
-      "apiVersion" := "v1";
+      "apiVersion" := version("PersistentVolumeClaim");
       "metadata" ::= {"name" := name}
     } {
       writeYaml(s"$name-persistent-volume-claim.yaml")(closure)
@@ -87,7 +101,7 @@ trait KubernetesDsl extends JsonDsl:
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
   def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "ConfigMap";"apiVersion" := "v1";"metadata" ::= {"name" := name}}{
+    withInterceptor{"kind" := "ConfigMap";"apiVersion" := version("ConfigMap");"metadata" ::= {"name" := name}}{
       writeYaml(s"$name-configmap.yaml")(closure)
     }
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {

@@ -49,6 +49,7 @@ trait KubernetesEnhenceDsl:
       val indexAndKeyAndValues = files.distinctBy(_._1)
         .zipWithIndex.map((k,v) => (v,k))
         .map((k,v) => ("variable_"+k.toString(),v))
+      imagePullPolicy("IfNotPresent")
       env(indexAndKeyAndValues.map((k,v) => (k,v._2)):_*)
       volumeMounts(name -> "/literial")
       val cmds = for ((k,v) <- indexAndKeyAndValues) yield 
