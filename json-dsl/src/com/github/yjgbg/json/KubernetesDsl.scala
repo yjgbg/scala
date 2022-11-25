@@ -232,10 +232,6 @@ trait KubernetesDsl extends JsonDsl:
   def storage(using PersistentVolumeClaimScope >> SpecScope >> ResourceScope)(request:Long) = {
     "requests" ::= {"storage" := s"${request}Gi"}
   }
-  def limits(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
-  (cpu:Int,memory:Long) = "limits" ::= {"memory" := s"${memory}M";"cpu":=s"${cpu}m"}
-  def requests(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)
-  (cpu:Int,memory:Long) = "requests" ::= {"memory" := s"${memory}M";"cpu":=s"${cpu}m"}
   def tcpPorts(using ServiceScope >> SpecScope)
   (values:(Int,Int)*) = values.foreach((targetPort,port) => "ports" ++= {
     "port" := port.toLong
