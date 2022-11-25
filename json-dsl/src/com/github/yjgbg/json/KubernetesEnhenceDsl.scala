@@ -32,15 +32,15 @@ trait KubernetesEnhenceDsl:
     port:Int,
     localPort:Int|Null = null,
     image:String = "marcnuri/port-forward"
-  ) = {
+  )(closure: PodScope >> SpecScope >> ConfigableScope ?=> Unit) = {
     val localPort0 = (if localPort != null then localPort else port).toString()
     container(localPort0,image) {
-      imagePullPolicy("IfNotPresent")
       env(
         "REMOTE_HOST" -> ip,
         "REMOTE_PORT" -> port.toString(),
         "LOCAL_PORT" -> localPort0
       )
+      closure.apply
     }
   }
   def volumeFromLiterialText(using (PodScope >> SpecScope),UtilsImage)(name:String,files:(String,String)*): Unit = {
