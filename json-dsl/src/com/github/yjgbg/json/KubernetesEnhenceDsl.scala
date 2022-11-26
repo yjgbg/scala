@@ -60,7 +60,7 @@ trait KubernetesEnhenceDsl:
 
   // 如果需要在多个命名空间部署，则需要在每个命名空间prepareAmmonite
   private var ammonitePVCInited:Map[NamespaceScope,Boolean] = Map()
-  def prepareAmmonite(using NamespaceScope)(ammoniteSize:Int = 5,coursierSize:Int = 5,storageClass:String|Null):Unit = {
+  def prepareAmmonite(using NamespaceScope)(ammoniteSize:Int = 5,coursierSize:Int = 5,storageClass:String|Null = null):Unit = {
     if (!ammonitePVCInited.getOrElse(summon,false)) {
       simplePVC("ammonite-cache",ammoniteSize,storageClass)
       simplePVC("coursier-cache",coursierSize,storageClass)
