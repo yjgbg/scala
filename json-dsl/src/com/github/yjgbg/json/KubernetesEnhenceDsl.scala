@@ -1,5 +1,7 @@
 package com.github.yjgbg.json
 
+import javax.xml.stream.events.Namespace
+
 trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
   case class UtilityImage(var image:String)
@@ -56,13 +58,17 @@ trait KubernetesEnhenceDsl:
     }
   }
 
-  // 如果需要在多个命名空间部署，则需要在多个命名空间prepareAmmonite
+  // 如果需要在多个命名空间部署，则需要在每个命名空间prepareAmmonite
+  private var ammonitePVCInited:Map[NamespaceScope,Boolean] = Map()
   def prepareAmmonite(using NamespaceScope)(ammoniteSize:Int = 5,coursierSize:Int = 5,storageClass:String|Null):Unit = {
-    simplePVC("ammonite-cache",ammoniteSize,storageClass)
-    simplePVC("coursier-cache",coursierSize,storageClass)
+    if (!ammonitePVCInited.getOrElse(summon,false)) {
+      simplePVC("ammonite-cache",ammoniteSize,storageClass)
+      simplePVC("coursier-cache",coursierSize,storageClass)
+      ammonitePVCInited = ammonitePVCInited + ((summon,true))
+    }
   }
   private var ammoniteInited:Map[PodScope >> SpecScope,Boolean] = Map()
-  def ammonite(using PodScope >> SpecScope,UtilityImage)
+  def ammonite(using NamespaceScope,PodScope >> SpecScope,UtilityImage)
   (
     name:String,
     script:String,
@@ -90,6 +96,7 @@ trait KubernetesEnhenceDsl:
         |""".stripMargin.stripLeading().stripTrailing(),
       "script.sc" ->  script
     )
+    prepareAmmonite()
     if (!ammoniteInited.getOrElse(summon,false)) {
       volumePVC("coursier-cache")
       volumePVC("ammonite-cache")
