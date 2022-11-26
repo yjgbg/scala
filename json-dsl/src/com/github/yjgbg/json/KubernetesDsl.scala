@@ -222,14 +222,14 @@ trait KubernetesDsl extends JsonDsl:
   /**
     * @param req2Limit 单位: 兆(MB)
     */
-  def memory(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)(req2Limit:(Long,Long)) = {
+  def memory(using PodScope >> SpecScope >> ContainerScope >> ResourceScope)(req2Limit:(Int,Int)) = {
     "requests" ::= {"memory" := s"${req2Limit._1}M"}
     "limits" ::= {"memory" := s"${req2Limit._2}M"}
   }
     /**
-    * @param req2Limit 单位: 吉(Gi)
+    * @param request 单位: 吉(Gi)
     */
-  def storage(using PersistentVolumeClaimScope >> SpecScope >> ResourceScope)(request:Long) = {
+  def storage(using PersistentVolumeClaimScope >> SpecScope >> ResourceScope)(request:Int) = {
     "requests" ::= {"storage" := s"${request}Gi"}
   }
   def tcpPorts(using ServiceScope >> SpecScope)
