@@ -67,7 +67,7 @@ trait KubernetesEnhenceDsl:
   (
     name:String,
     script:String,
-    ammVersion:String = "2.5.5",
+    ammVersion:String = "2.5.5-17-df243e14",
     scalaVersion:String = "3.2",
     image:String = "eclipse-temurin:latest"
   )(closure : PodScope >> SpecScope >> ContainerScope ?=> Unit ) : Unit = {
