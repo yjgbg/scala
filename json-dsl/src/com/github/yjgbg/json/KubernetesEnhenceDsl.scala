@@ -99,9 +99,8 @@ trait KubernetesEnhenceDsl:
     }
     container(name,image) {
       volumeMounts(s"scripts-${name}" -> "/workspace")
-      volumeMounts("coursier-cache" -> "/coursiercache")
+      volumeMounts("coursier-cache" -> "/root/.cache/coursier/v1")
       volumeMounts("ammonite-cache" -> "/root/.ammonite/download")
-      env("COURSIER_CACHE" -> "/coursiercache")
       command("sh","-c",s"""
         |chmod -R a+x /workspace/amm
         |/workspace/amm /workspace/script.sc
