@@ -4,8 +4,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 object KubernetesDsl extends 
   KubernetesDsl,
-  KubernetesEnhenceDsl,
-  KubernetesApplyDsl
+  KubernetesEnhenceDsl
 trait KubernetesDsl extends JsonDsl:
   opaque type VerMan = AtomicReference[Map[String,String]]
   given VerMan = new AtomicReference(Map(
@@ -19,20 +18,60 @@ trait KubernetesDsl extends JsonDsl:
   ))
   protected def version(resourceName:String):String = summon[VerMan].get()(resourceName)
   def declareVersion(seq:(String,String)*) = summon[VerMan].getAndUpdate(_ ++ seq)
-  def namespace(using Interceptor,Prefix)(value:String)(closure:(Interceptor,Prefix) ?=> Unit) = 
-    prefix(value+"-") {withInterceptor{"metadata" ::= {"namespace" := value}}(closure)}
+
+  class Resource(val name:String,val json:Scope ?=> Unit)
+  class NamespaceScope(val name:String,var resourceSeq:Seq[Resource])
+  class ContextScope(name:String,var namespaces:Seq[NamespaceScope])
+  def context(name: String, apply: Boolean = false)(closure: ContextScope ?=> Unit) = {
+    import sys.process._
+    s"rm -rf target/$name/".! // 清理掉工作区
+    val contextScope = ContextScope(name,Seq())
+    closure(using contextScope) // 执行dsl
+    contextScope.namespaces.foreach{ns=> ns.resourceSeq.foreach{ res => 
+      writeYaml(s"target/${name}/${ns.name}/${res.name}.yaml"){res.json}
+    }}
+    if (apply) {
+      val currentContext = "kubectl config get-contexts".!!.lines()
+        .filter(it => it.contains("*"))
+        .findAny()
+        .orElseThrow()
+        .split(" ")
+        .filter(!_.isBlank())(1) // 获取当前context
+      if (currentContext != name) s"kubectl config use-context ${name}".! // 切换上下文
+      s"kubectl apply -f target/${name}".! // 应用yaml
+      if (currentContext != name) s"kubectl config use-context ${currentContext}".! // 切换上下文
+    }
+  }
+  def namespace(using ContextScope)(value:String)(closure: NamespaceScope ?=> Unit) = {
+    val x = NamespaceScope(value,Seq())
+    closure.apply(using x)
+    summon[ContextScope].namespaces = summon[ContextScope].namespaces :+ x
+  }
   opaque type >>[A,B[_]] = B[A]
   opaque type DeploymentScope = Scope
-  def deployment(using Interceptor,Prefix)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Deployment";"apiVersion" := version("Deployment");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-deployment.yaml")(closure)
-    }
+  def deployment(using NamespaceScope)(name:String)(closure: DeploymentScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-deployment",{
+      "kind" := "Deployment"
+      "apiVersion" := version("Deployment")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
   opaque type ServiceScope = Scope
-  def service(using Interceptor,Prefix)(name:String)(closure:ServiceScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Service";"apiVersion" := version("Service");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-service.yaml")(closure)
-    }
-  def tcpNodePort(using Interceptor,Prefix)(nodePort:Int|Null =null ,targetPort:Int,selector:(String,String)*) = 
+  def service(using NamespaceScope)(name:String)(closure:ServiceScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-service",{
+      "kind" := "Service"
+      "apiVersion" := version("Service")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
+
+  def tcpNodePort(using NamespaceScope)(nodePort:Int|Null =null ,targetPort:Int,selector:(String,String)*) = 
     service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
       spec {
         "type" := "NodePort"
@@ -45,7 +84,7 @@ trait KubernetesDsl extends JsonDsl:
         }
       }
     }
-  def udpNodePort(using Interceptor,Prefix)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
+  def udpNodePort(using NamespaceScope)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
     service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
       spec {
         "type" := "NodePort"
@@ -58,7 +97,7 @@ trait KubernetesDsl extends JsonDsl:
         }
       }
     }
-  def sctpNodePort(using Interceptor,Prefix)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
+  def sctpNodePort(using NamespaceScope)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
     service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
       spec {
         "type" := "NodePort"
@@ -72,38 +111,64 @@ trait KubernetesDsl extends JsonDsl:
       }
     }
   opaque type PodScope = Scope
-  def pod(using Interceptor,Prefix)(name:String)(closure:PodScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Pod";"apiVersion" := version("Pod");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-pod.yaml")(closure)
-    }
+  def pod(using NamespaceScope)(name:String)(closure:PodScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-pod",{
+      "kind" := "Pod"
+      "apiVersion" := version("Pod")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
   opaque type JobScope = Scope
-  def job(using Interceptor,Prefix)(name:String)(closure:JobScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "Job";"apiVersion" := version("Job");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-job.yaml")(closure)
-    }
-  def backoffLimit(using JobScope >> SpecScope)(int:Int):Unit = {
-    "backoffLimit" := int.toLong
-  }
+  def job(using NamespaceScope)(name:String)(closure:JobScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-job",{
+      "kind" := "Job"
+      "apiVersion" := version("Job")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
+  // def backoffLimit(using )(int:Int):Unit = {
+  //   "backoffLimit" := int.toLong
+  // }
   opaque type CronJobScope = Scope
-  def cronJob(using Interceptor,Prefix)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "CronJob";"apiVersion" := version("CronJob");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-cronjob.yaml")(closure)
-    }
+  def cronJob(using NamespaceScope)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-cron-job",{
+      "kind" := "CronJob"
+      "apiVersion" := version("CronJob")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
   opaque type PersistentVolumeClaimScope = Scope
-  def persistentVolumeClaim(using Interceptor,Prefix)(name:String)(closure:PersistentVolumeClaimScope ?=> Unit) =
-    withInterceptor{
-      "kind" := "PersistentVolumeClaim";
-      "apiVersion" := version("PersistentVolumeClaim");
-      "metadata" ::= {"name" := name}
-    } {
-      writeYaml(s"$name-persistent-volume-claim.yaml")(closure)
-    }
+  def persistentVolumeClaim(using NamespaceScope)(name:String)(closure:PersistentVolumeClaimScope ?=> Unit) =
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-persistent-volume-claim",{
+      "kind" := "PersistentVolumeClaim"
+      "apiVersion" := version("PersistentVolumeClaim")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
   def schedule(using CronJobScope >> SpecScope)(cron:String):Unit = "schedule" := cron
   opaque type ConfigMapScope = Scope
-  def configMap(using Interceptor,Prefix)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
-    withInterceptor{"kind" := "ConfigMap";"apiVersion" := version("ConfigMap");"metadata" ::= {"name" := name}}{
-      writeYaml(s"$name-configmap.yaml")(closure)
-    }
+  def configMap(using NamespaceScope)(name:String)(closure:ConfigMapScope ?=> Unit):Unit = 
+    summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-config-map",{
+      "kind" := "ConfigMap"
+      "apiVersion" := version("ConfigMap")
+      "metadata" ::= {
+        "namespace" := summon[NamespaceScope].name
+        "name" := name
+      }
+      closure.apply
+    })
   def data(using ConfigMapScope)(values: (String,String)*) : Unit = "data" ::= {
     values.foreach((k,v) => k := v)
   }

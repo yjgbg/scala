@@ -5,8 +5,7 @@ trait KubernetesEnhenceDsl:
   case class UtilityImage(var image:String)
   given UtilityImage = UtilityImage("alpine:latest")
   def utilityImage(image:String):Unit = summon[UtilityImage].image = image
-  def simplePVC(using interceptor:Interceptor,prefix:Prefix)
-  (name:String,size:Int = 5,storageClass:String|Null = null) =
+  def simplePVC(using NamespaceScope)(name:String,size:Int = 5,storageClass:String|Null = null) =
     persistentVolumeClaim(name) {
       spec {
         accessModes("ReadWriteOnce")
@@ -58,7 +57,7 @@ trait KubernetesEnhenceDsl:
   }
 
   // 如果需要在多个命名空间部署，则需要在多个命名空间prepareAmmonite
-  def prepareAmmonite(using Prefix,Interceptor)(ammoniteSize:Int = 5,coursierSize:Int = 5,storageClass:String|Null):Unit = {
+  def prepareAmmonite(using NamespaceScope)(ammoniteSize:Int = 5,coursierSize:Int = 5,storageClass:String|Null):Unit = {
     simplePVC("ammonite-cache",ammoniteSize,storageClass)
     simplePVC("coursier-cache",coursierSize,storageClass)
   }

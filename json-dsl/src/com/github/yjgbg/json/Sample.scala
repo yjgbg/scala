@@ -3,7 +3,7 @@ package com.github.yjgbg.json
 object Sample {
   @main def main = {
     import KubernetesDsl.*
-    prefix("target/xx/") {
+    context("aaa") {
       namespace("default") {
         pod("xxx") {
           spec {
