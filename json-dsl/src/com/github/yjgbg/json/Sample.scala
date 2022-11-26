@@ -7,7 +7,7 @@ object Sample {
       namespace("default") {
         pod("xxx") {
           spec {
-            proxy("mysql", 3306)
+            proxy("mysql", 3306){}
           }
         }
         simplePVC("xxx")

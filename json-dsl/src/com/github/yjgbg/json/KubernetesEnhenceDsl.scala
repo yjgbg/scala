@@ -32,7 +32,7 @@ trait KubernetesEnhenceDsl:
     port:Int,
     localPort:Int|Null = null,
     image:String = "marcnuri/port-forward"
-  )(closure: PodScope >> SpecScope >> ConfigableScope ?=> Unit) = {
+  )(closure: PodScope >> SpecScope >> ContainerScope ?=> Unit) = {
     val localPort0 = (if localPort != null then localPort else port).toString()
     container(s"proxy-$localPort0",image) {
       env(
