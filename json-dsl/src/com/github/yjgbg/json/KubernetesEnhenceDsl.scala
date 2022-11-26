@@ -4,7 +4,7 @@ trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
   case class UtilityImage(var image:String)
   given UtilityImage = UtilityImage("alpine:latest")
-  def utilityImage(image:String):UtilityImage = summon[UtilityImage].image image
+  def utilityImage(image:String):Unit = summon[UtilityImage].image = image
   def simplePVC(using interceptor:Interceptor,prefix:Prefix)
   (name:String,size:Long = 5,storageClass:String|Null = null) = // 创建一个pvc
     persistentVolumeClaim(name) {
