@@ -19,8 +19,8 @@ object Sample {
               labels("app" -> "gateway")
               spec {
                 volumePVC("xxx")
-                volumeFromImage("www", "reg2.hypers.cc/has-frontend:latest", "/usr/share/nginx/www/")
-                volumeFromLiterialText("conf",
+                volumeImage("www", "reg2.hypers.cc/has-frontend:latest", "/usr/share/nginx/www/")
+                volumeLiterialText("conf",
                 "nginx.conf" -> """
                   |server {
                   |  listen 80;
@@ -29,7 +29,7 @@ object Sample {
                   |  }
                   |}
                   |""".stripMargin.stripLeading().stripIndent())
-                volumeFromLiterialText(
+                volumeLiterialText(
                   "scripts",
                   "0.script.sh" -> "echo 'hello' > /hello.txt"
                 )

@@ -16,8 +16,7 @@ trait KubernetesEnhenceDsl:
         }
       }
     }
-
-  def volumeFromImage(using PodScope >> SpecScope)(
+  def volumeImage(using PodScope >> SpecScope)(
     name:String,
     image:String,
     path:String):Unit = { 
@@ -43,7 +42,7 @@ trait KubernetesEnhenceDsl:
       closure.apply
     }
   }
-  def volumeFromLiterialText(using (PodScope >> SpecScope),UtilityImage)(name:String,files:(String,String)*): Unit = {
+  def volumeLiterialText(using (PodScope >> SpecScope),UtilityImage)(name:String,files:(String,String)*): Unit = {
     volumeEmptyDir(name)
     initContainer(name,summon[UtilityImage].image) {
       val indexAndKeyAndValues = files.distinctBy(_._1)
@@ -77,7 +76,7 @@ trait KubernetesEnhenceDsl:
     val downloadFile = s"$ammExecPath-tmp-download"
     val ammDownloadUrl =
       s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
-    volumeFromLiterialText(s"scripts-${name}",
+    volumeLiterialText(s"scripts-${name}",
       //这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
       "amm" -> s"""
         |#!/usr/bin/env sh
@@ -105,6 +104,14 @@ trait KubernetesEnhenceDsl:
         |chmod -R a+x /workspace/amm
         |/workspace/amm /workspace/script.sc
         |""".stripMargin.stripLeading().stripTrailing())
+      closure.apply
+    }
+  }
+  def shell(using PodScope >> SpecScope,UtilityImage)
+  (name:String,script:String,image:String = "ubuntu:latest")
+  (closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit = {
+    container(name,image) {
+      command("sh","-c",script)
       closure.apply
     }
   }
