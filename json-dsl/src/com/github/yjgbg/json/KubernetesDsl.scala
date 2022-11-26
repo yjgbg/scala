@@ -6,8 +6,8 @@ object KubernetesDsl extends
   KubernetesDsl,
   KubernetesEnhenceDsl
 trait KubernetesDsl extends JsonDsl:
-  opaque type VerMan = AtomicReference[Map[String,String]]
-  given VerMan = new AtomicReference(Map(
+  private var versions = Map[ContextScope,Map[String,String]]()
+  private val defaultVersion:Map[String,String] = Map(
     "Deployment" -> "apps/v1",
     "Service" -> "v1",
     "Pod" -> "v1",
@@ -15,12 +15,16 @@ trait KubernetesDsl extends JsonDsl:
     "CronJob" -> "batch/v1",
     "PersistentVolumeClaim" -> "v1",
     "ConfigMap" -> "v1"
-  ))
-  protected def version(resourceName:String):String = summon[VerMan].get()(resourceName)
-  def declareVersion(seq:(String,String)*) = summon[VerMan].getAndUpdate(_ ++ seq)
+  )
+
+  protected def version(using NamespaceScope)(resourceName:String):String = versions.getOrElse(summon[NamespaceScope].context,defaultVersion)(resourceName)
+  def resourceVersion(using ContextScope)(resourceAndVersion:(String,String)) = {
+    val verMan = versions.getOrElse(summon,defaultVersion)
+    versions = versions +((summon,verMan + (resourceAndVersion))) 
+  }
 
   class Resource(val name:String,val json:Scope ?=> Unit)
-  class NamespaceScope(val name:String,var resourceSeq:Seq[Resource])
+  class NamespaceScope(private[KubernetesDsl] val context:ContextScope,val name:String,var resourceSeq:Seq[Resource])
   class ContextScope(name:String,var namespaces:Seq[NamespaceScope])
   def context(name: String, apply: Boolean = false)(closure: ContextScope ?=> Unit) = {
     import sys.process._
@@ -43,7 +47,7 @@ trait KubernetesDsl extends JsonDsl:
     }
   }
   def namespace(using ContextScope)(value:String)(closure: NamespaceScope ?=> Unit) = {
-    val x = NamespaceScope(value,Seq())
+    val x = NamespaceScope(summon,value,Seq())
     closure.apply(using x)
     summon[ContextScope].namespaces = summon[ContextScope].namespaces :+ x
   }
