@@ -2,9 +2,9 @@ package com.github.yjgbg.json
 
 trait KubernetesEnhenceDsl:
   self: KubernetesDsl =>
-  opaque type UtilsImage = String
-  given UtilsImage = "alpine:latest"
-  def utilsImage(image:String):UtilsImage = image
+  case class UtilityImage(var image:String)
+  given UtilityImage = UtilityImage("alpine:latest")
+  def utilityImage(image:String):UtilityImage = summon[UtilityImage].image image
   def simplePVC(using interceptor:Interceptor,prefix:Prefix)
   (name:String,size:Long = 5,storageClass:String|Null = null) = // 创建一个pvc
     persistentVolumeClaim(name) {
@@ -43,9 +43,9 @@ trait KubernetesEnhenceDsl:
       closure.apply
     }
   }
-  def volumeFromLiterialText(using (PodScope >> SpecScope),UtilsImage)(name:String,files:(String,String)*): Unit = {
+  def volumeFromLiterialText(using (PodScope >> SpecScope),UtilityImage)(name:String,files:(String,String)*): Unit = {
     volumeEmptyDir(name)
-    initContainer(name,summon[UtilsImage]) {
+    initContainer(name,summon[UtilityImage].image) {
       val indexAndKeyAndValues = files.distinctBy(_._1)
         .zipWithIndex.map((k,v) => (v,k))
         .map((k,v) => ("variable_"+k.toString(),v))
@@ -58,24 +58,26 @@ trait KubernetesEnhenceDsl:
     }
   }
 
+  // 如果需要在多个命名空间部署，则需要在多个命名空间prepareAmmonite
   def prepareAmmonite(using Prefix,Interceptor)(ammoniteSize:Long = 5,coursierSize:Long = 5,storageClass:String|Null):Unit = {
     simplePVC("ammonite-cache",ammoniteSize,storageClass)
     simplePVC("coursier-cache",coursierSize,storageClass)
   }
-  def ammonite(using PodScope >> SpecScope,UtilsImage)
+  private var ammoniteInited:Map[PodScope >> SpecScope,Boolean] = Map()
+  def ammonite(using PodScope >> SpecScope,UtilityImage)
   (
     name:String,
     script:String,
     ammVersion:String = "2.5.5",
     scalaVersion:String = "3.2",
-    image:String = "eclipse-temurin:17-jdk"
+    image:String = "eclipse-temurin:latest"
   )(closure : PodScope >> SpecScope >> ContainerScope ?=> Unit ) : Unit = {
     val ammDownloadPath = "/root/.ammonite/download"
     val ammExecPath = s"$ammDownloadPath/${ammVersion}_$scalaVersion"
     val downloadFile = s"$ammExecPath-tmp-download"
     val ammDownloadUrl =
       s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
-    volumeFromLiterialText("scripts",
+    volumeFromLiterialText(s"scripts-${name}",
       //这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
       "amm" -> s"""
         |#!/usr/bin/env sh
@@ -90,10 +92,13 @@ trait KubernetesEnhenceDsl:
         |""".stripMargin.stripLeading().stripTrailing(),
       "script.sc" ->  script
     )
-    volumePVC("coursier-cache")
-    volumePVC("ammonite-cache")
+    if (ammoniteInited(summon)) {
+      volumePVC("coursier-cache")
+      volumePVC("ammonite-cache")
+      ammoniteInited = ammoniteInited + ((summon,true))
+    }
     container(name,image) {
-      volumeMounts("scripts" -> "/workspace")
+      volumeMounts(s"scripts-${name}" -> "/workspace")
       volumeMounts("coursier-cache" -> "/coursiercache")
       volumeMounts("ammonite-cache" -> "/root/.ammonite/download")
       env("COURSIER_CACHE" -> "/coursiercache")
