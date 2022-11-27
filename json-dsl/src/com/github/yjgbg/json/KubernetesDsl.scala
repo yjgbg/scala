@@ -276,6 +276,16 @@ trait KubernetesDsl extends JsonDsl:
     values.foreach("args" += _)
   def env(using PodScope >> SpecScope >> ContainerScope)(values:(String,String)*):Unit = 
     values.foreach{(k,v) => "env" ++= {"name" := k;"value" := v}}
+  def envFromConfigMapKey(using PodScope >> SpecScope >> ContainerScope)(kv:(String,(String,String))):Unit = 
+    "env" ++= {"name" := kv._1;"valueFrom" ::= { "configMapKeyRef" ::={
+      "name" := kv._2._1
+      "key" := kv._2._1
+    }}}
+  def envFromSecretKey(using PodScope >> SpecScope >> ContainerScope)(kv:(String,(String,String))):Unit = 
+    "env" ++= {"name" := kv._1;"valueFrom" ::= { "secretKeyRef" ::={
+      "name" := kv._2._1
+      "key" := kv._2._1
+    }}}
   def volumeMounts(using PodScope >> SpecScope >> ContainerScope)
   (nameAndPath:(String,String)*):Unit = nameAndPath.foreach{(name,mountPath) => 
     "volumeMounts" ++= {"name" := name;"mountPath" := mountPath}
