@@ -32,7 +32,7 @@ trait KubernetesDsl extends JsonDsl:
     val contextScope = ContextScope(name,Seq())
     closure(using contextScope) // 执行dsl
     contextScope.namespaces.foreach{ns=> ns.resourceSeq.foreach{ res => 
-      writeYaml(s"target/${name}/${ns.name}/${res.name}.yaml"){res.json}
+      writeYaml(s"target/${name}/${ns.name}-${res.name}.yaml"){res.json}
     }}
     if (apply) {
       val currentContext = "kubectl config get-contexts".!!.lines()
