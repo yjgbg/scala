@@ -78,7 +78,7 @@ trait KubernetesEnhenceDsl:
   )(closure : PodScope >> SpecScope >> ContainerScope ?=> Unit ) : Unit = {
     val ammDownloadPath = "/root/.ammonite/download"
     val ammExecPath = s"$ammDownloadPath/${ammVersion}_$scalaVersion"
-    val downloadFile = s"$ammExecPath-tmp-download"
+    val downloadFile = s"/tmp/ammonite-download"
     val ammDownloadUrl =
       s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
     volumeLiterialText(s"scripts-${name}",
