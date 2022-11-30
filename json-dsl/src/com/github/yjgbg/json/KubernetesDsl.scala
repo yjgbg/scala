@@ -136,9 +136,9 @@ trait KubernetesDsl extends JsonDsl:
       }
       closure.apply
     })
-  // def backoffLimit(using )(int:Int):Unit = {
-  //   "backoffLimit" := int.toLong
-  // }
+  def backoffLimit(using JobScope >> SpecScope)(int:Int):Unit = {
+    "backoffLimit" := int.toLong
+  }
   opaque type CronJobScope = Scope
   def cronJob(using NamespaceScope)(name:String)(closure:CronJobScope ?=> Unit):Unit = 
     summon[NamespaceScope].resourceSeq = summon[NamespaceScope].resourceSeq :+ Resource(s"$name-cron-job",{
