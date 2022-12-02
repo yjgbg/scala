@@ -75,8 +75,8 @@ trait KubernetesDsl extends JsonDsl:
       closure.apply
     })
 
-  def tcpNodePort(using NamespaceScope)(nodePort:Int|Null =null ,targetPort:Int,selector:(String,String)*) = 
-    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+  def tcpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
         this.selector(selector:_*)
@@ -84,12 +84,12 @@ trait KubernetesDsl extends JsonDsl:
           "protocol" := "TCP"
           "targetPort" := targetPort.toLong
           "port" := targetPort.toLong
-          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+          "nodePort" := nodePort.toLong
         }
       }
     }
-  def udpNodePort(using NamespaceScope)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
-    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+  def udpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
         this.selector(selector:_*)
@@ -97,12 +97,12 @@ trait KubernetesDsl extends JsonDsl:
           "protocol" := "UDP"
           "targetPort" := targetPort.toLong
           "port" := targetPort.toLong
-          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+          "nodePort" := nodePort.toLong
         }
       }
     }
-  def sctpNodePort(using NamespaceScope)(nodePort:Int|Null = null,targetPort:Int,selector:(String,String)*) = 
-    service("nodeport-"+selector.map((k,v) => s"$k-$v").mkString("--")) {
+  def sctpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+    service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
         this.selector(selector:_*)
@@ -110,7 +110,7 @@ trait KubernetesDsl extends JsonDsl:
           "protocol" := "SCTP"
           "targetPort" := targetPort.toLong
           "port" := targetPort.toLong
-          if(nodePort!=null) "nodePort" := nodePort.nn.toLong
+          "nodePort" := nodePort.toLong
         }
       }
     }

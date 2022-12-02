@@ -43,6 +43,7 @@ object Sample {
             }
           }
         }
+        tcpNodePort(8080,8080,"" -> "")
         service("gateway") {
           spec {
             selector("app" -> "gateway")
