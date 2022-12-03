@@ -43,7 +43,7 @@ trait KubernetesEnhenceDsl:
       closure.apply
     }
   }
-  def volumeLiterialText(using (PodScope >> SpecScope),UtilityImage)(name:String,files:(String,String)*): Unit = {
+  def volumeLiteralText(using (PodScope >> SpecScope), UtilityImage)(name:String, files:(String,String)*): Unit = {
     volumeEmptyDir(name)
     initContainer(name,summon[UtilityImage].image) {
       val indexAndKeyAndValues = files.distinctBy(_._1)
@@ -51,9 +51,9 @@ trait KubernetesEnhenceDsl:
         .map((k,v) => ("variable_"+k.toString(),v))
       imagePullPolicy("IfNotPresent")
       env(indexAndKeyAndValues.map((k,v) => (k,v._2)):_*)
-      volumeMounts(name -> "/literial")
-      val cmds = for ((k,v) <- indexAndKeyAndValues) yield 
-        s"""echo "${"$"}{${k}}" > /literial/${v._1}"""
+      volumeMounts(name -> "/literal")
+      val cmds = for ((k,v) <- indexAndKeyAndValues) yield
+        s"""echo "${"$"}{${k}}" > /literal/${v._1}"""
       command("sh","-c",cmds.mkString("\n"))
     }
   }
@@ -81,7 +81,7 @@ trait KubernetesEnhenceDsl:
     val downloadFile = s"/tmp/ammonite-download"
     val ammDownloadUrl =
       s"https://github.com/lihaoyi/ammonite/releases/download/${ammVersion.split("-")(0)}/$scalaVersion-$ammVersion"
-    volumeLiterialText(s"scripts-${name}",
+    volumeLiteralText(s"scripts-${name}",
       //这个amm文件是一个wrapper 脚本，会自动从github release pages 下载指定版本的ammonite
       "amm" -> s"""
         |#!/usr/bin/env sh
