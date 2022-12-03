@@ -332,7 +332,7 @@ trait KubernetesDsl extends JsonDsl:
   def exec(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)(cmd:String*) = 
     "exec" ::= {cmd.foreach("command" += _)}
   def httpGet(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)
-  (path:String,port:Int,host:String|Null,schema:"HTTP"|"HTTPS" = "HTTP",headers:Map[String,String]) = "httpGet" ::= {
+  (path:String,port:Int,host:String|Null = null,schema:"HTTP"|"HTTPS" = "HTTP",headers:Map[String,String] = Map()) = "httpGet" ::= {
     "path" := path
     if (host!=null) "host" := host.nn
     "schema" := schema
