@@ -265,6 +265,89 @@ trait KubernetesDsl extends JsonDsl:
       "image":=image
       closure.apply
     }
+  opaque type ProbeScope[A] = Scope
+  /**
+    * 存活探针
+    *
+    * @param initialDelaySeconds 容器调度多久后开始探测？
+    * @param periodSeconds 多久探测一次？
+    * @param timeoutSeconds 超时时间
+    * @param successThreshold 连续成功几次才算成功？
+    * @param failureThreshold 连续失败几次才算失败？
+    * @param closure 闭包
+    */
+  def livenessProbe(using PodScope >> SpecScope >> ContainerScope)
+  (initialDelaySeconds:Int = 5,periodSeconds:Int = 5,timeoutSeconds:Int = 1,successThreshold:Int = 1,failureThreshold:Int = 1)
+  (closure:PodScope >> SpecScope >> ContainerScope >> ProbeScope ?=> Unit):Unit = 
+    "livenessProbe" ::= {
+      "initialDelaySeconds" := initialDelaySeconds.toLong
+      "periodSeconds" := periodSeconds.toLong
+      "timeoutSeconds" := timeoutSeconds.toLong
+      "successThreshold" := successThreshold.toLong
+      "failureThreshold" := failureThreshold.toLong
+      closure.apply
+    }
+  /**
+    * 就绪探针
+    *
+    * @param initialDelaySeconds 容器调度多久后开始探测？
+    * @param periodSeconds 多久探测一次？
+    * @param timeoutSeconds 超时时间
+    * @param successThreshold 连续成功几次才算成功？
+    * @param failureThreshold 连续失败几次才算失败？
+    * @param closure 闭包
+    */
+  def readinessProbe(using PodScope >> SpecScope >> ContainerScope)
+  (initialDelaySeconds:Int = 5,periodSeconds:Int = 5,timeoutSeconds:Int = 1,successThreshold:Int = 1,failureThreshold:Int = 1)
+  (closure:PodScope >> SpecScope >> ContainerScope >> ProbeScope ?=> Unit):Unit = 
+    "readinessProbe" ::= {
+      "initialDelaySeconds" := initialDelaySeconds.toLong
+      "periodSeconds" := periodSeconds.toLong
+      "timeoutSeconds" := timeoutSeconds.toLong
+      "successThreshold" := successThreshold.toLong
+      "failureThreshold" := failureThreshold.toLong
+      closure.apply
+    }
+  /**
+    * 启动探针
+    *
+    * @param initialDelaySeconds 容器调度多久后开始探测？
+    * @param periodSeconds 多久探测一次？
+    * @param timeoutSeconds 超时时间
+    * @param successThreshold 连续成功几次才算成功？
+    * @param failureThreshold 连续失败几次才算失败？
+    * @param closure 闭包
+    */
+  def startupProbe(using PodScope >> SpecScope >> ContainerScope)
+  (initialDelaySeconds:Int = 5,periodSeconds:Int = 5,timeoutSeconds:Int = 1,successThreshold:Int = 1,failureThreshold:Int = 1)
+  (closure:PodScope >> SpecScope >> ContainerScope >> ProbeScope ?=> Unit):Unit = 
+    "startupProbe" ::= {
+      "initialDelaySeconds" := initialDelaySeconds.toLong
+      "periodSeconds" := periodSeconds.toLong
+      "timeoutSeconds" := timeoutSeconds.toLong
+      "successThreshold" := successThreshold.toLong
+      "failureThreshold" := failureThreshold.toLong
+      closure.apply
+    }
+  def exec(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)(cmd:String*) = 
+    "exec" ::= {cmd.foreach("command" += _)}
+  def httpGet(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)
+  (path:String,port:Int,host:String|Null,schema:"HTTP"|"HTTPS" = "HTTP",headers:Map[String,String]) = "httpGet" ::= {
+    "path" := path
+    if (host!=null) "host" := host.nn
+    "schema" := schema
+    "port" := port.toLong
+    headers.foreach((k,v) => {
+      "httpHeaders" ++= {
+        "name" := k
+        "value" := v
+      }
+    })
+  }
+
+  def tcpSocket(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)
+  (port:Int):Unit = "tcpSocket" ::= {"port" := port.toLong}
+
   def workingDir(using PodScope >> SpecScope >> ContainerScope)(path:String):Unit = 
     "workingDir" := path
   def imagePullPolicy(using PodScope >> SpecScope >> ContainerScope)
