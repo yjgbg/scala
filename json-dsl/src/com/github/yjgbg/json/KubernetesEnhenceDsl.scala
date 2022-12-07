@@ -113,11 +113,3 @@ trait KubernetesEnhenceDsl:
       closure.apply
     }
   }
-  def shell(using PodScope >> SpecScope,UtilityImage)
-  (name:String,script:String,image:String = "ubuntu:latest")
-  (closure:PodScope >> SpecScope >> ContainerScope ?=> Unit):Unit = {
-    container(name,image) {
-      command("sh","-c",script)
-      closure.apply
-    }
-  }

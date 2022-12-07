@@ -412,3 +412,4 @@ trait KubernetesDsl extends JsonDsl:
     "targetPort" := targetPort.toLong
     "protocol" := "SCTP"
   })
+  def ports(using PodScope >> SpecScope >> ContainerScope)(ports:Int*):Unit = ports.foreach(it => "ports" ++= { "containerPort" := it.toLong})
