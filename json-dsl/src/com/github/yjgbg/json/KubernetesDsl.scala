@@ -225,6 +225,9 @@ trait KubernetesDsl extends JsonDsl:
   def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
   def failedJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "failedJobsHistoryLimit" := int.toLong
   def successfulJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "successfulJobsHistoryLimit" := int.toLong
+  def nodeSelector(using PodScope >> SpecScope)(labels:(String,String)*) = "nodeSelector" ::= {
+    labels.toMap.foreach((k,v) => k := v)
+  }
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
     "restartPolicy" := policy
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
@@ -332,10 +335,10 @@ trait KubernetesDsl extends JsonDsl:
   def exec(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)(cmd:String*) = 
     "exec" ::= {cmd.foreach("command" += _)}
   def httpGet(using PodScope >> SpecScope >> ContainerScope >> ProbeScope)
-  (path:String,port:Int,host:String|Null = null,schema:"HTTP"|"HTTPS" = "HTTP",headers:Map[String,String] = Map()) = "httpGet" ::= {
+  (path:String,port:Int,host:String|Null = null,scheme:"HTTP"|"HTTPS" = "HTTP",headers:Map[String,String] = Map()) = "httpGet" ::= {
     "path" := path
     if (host!=null) "host" := host.nn
-    "schema" := schema
+    "scheme" := scheme
     "port" := port.toLong
     headers.foreach((k,v) => {
       "httpHeaders" ++= {

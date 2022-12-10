@@ -11,9 +11,9 @@ import contrib.scalapblib._
 trait StdScalaModule extends ScalaModule with PublishModule {
   override def scalaVersion: T[String] = "3.2.1"
   // override def sonatypeUri = "https://nexus3.hypers.cc/repository/orca"
-  // override def publishVersion = "1.0"
+  // override def publishVersion = "1.2"
 
-  override def publishVersion = "1.1-SNAPSHOT"
+  override def publishVersion = "1.2-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,

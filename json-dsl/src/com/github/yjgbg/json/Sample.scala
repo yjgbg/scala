@@ -18,26 +18,22 @@ object Sample {
             template {
               labels("app" -> "gateway")
               spec {
-                volumePVC("xxx")
-                volumeImage("www", "reg2.hypers.cc/has-frontend:latest", "/usr/share/nginx/www/")
-                volumeLiteralText("conf",
-                "nginx.conf" -> """
-                  |server {
-                  |  listen 80;
-                  |  location / {
-                  |    
-                  |  }
-                  |}
-                  |""".stripMargin.stripLeading().stripIndent())
-                volumeLiteralText(
-                  "scripts",
-                  "0.script.sh" -> "echo 'hello' > /hello.txt"
-                )
+                // volumePVC("dist")
+                volumeCustom("www") {
+                  fileImage("www","reg2.hypers.cc/has-frontend:latest","/usr/share/nginx/www")
+                  fileLiteralText("nginx.conf","""
+                    |server {
+                    |  listen 80;
+                    |  location / {
+                    |    
+                    |  }
+                    |}
+                    |""".stripMargin.stripLeading().stripIndent())
+                  fileLiteralText( "0.script.sh", "echo 'hello' > /hello.txt")
+                }
                 container("app", "nginx:alpine") {
                   volumeMounts("www" -> "/usr/share/nginx/www")
                   env("k0" -> "v0")
-                  volumeMounts("conf" -> "/etc/nginx/conf.d/")
-                  volumeMounts("scripts" -> "/entrypoint.d/40.custom/")
                 }
               }
             }
