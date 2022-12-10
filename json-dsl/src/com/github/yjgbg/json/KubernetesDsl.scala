@@ -191,7 +191,7 @@ trait KubernetesDsl extends JsonDsl:
   def selector(using ServiceScope >> SpecScope)(labels:(String,String)*) = 
     labels.foreach{(k,v) => "selector" ::= { k := v}}
   def selectorMatchLabels[A <: DeploymentScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
-    labels.foreach{(k,v) => "selector" ::= {"matchLabels" ::=  k := v}}
+    labels.foreach{(k,v) => "selector" ::= {"matchLabels" ::=  {k := v}}}
   enum Expression:
     case In(key:String,value:Seq[String]) extends Expression
     case NotIn(key:String,value:Seq[String]) extends Expression
