@@ -177,9 +177,9 @@ trait KubernetesDsl extends JsonDsl:
     values.foreach((k,v) => k := v)
   }
   def labels(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope)
-    (values:(String,String)*) = "metadata" ::= {"labels" ::= {values.foreach(_ := _)}}
+    (values:(String,String)*) = values.foreach{(k,v) => "metadata" ::= {"labels" ::= {k := v}}}
   def annotations(using DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope)
-    (values:(String,String)*) = "metadata" ::= {"annotations" ::= {values.foreach(_ := _)}}
+    (values:(String,String)*) = values.foreach{(k,v) => "metadata" ::= {"annotations" ::= {k := v}}}
   opaque type SpecScope[A] = Scope
   def spec[A <: DeploymentScope|ServiceScope|PodScope|JobScope|CronJobScope|ConfigMapScope|PersistentVolumeClaimScope]
   (using A)(closure: A >> SpecScope ?=> Unit) = "spec" ::= closure
@@ -189,9 +189,9 @@ trait KubernetesDsl extends JsonDsl:
   (values:("ReadWriteOnce"|"ReadOnlyMany"|"ReadWriteMany"|"ReadWriteOncePod")*) = 
     values.foreach("accessModes" += _)
   def selector(using ServiceScope >> SpecScope)(labels:(String,String)*) = 
-    if !labels.isEmpty then "selector" ::= {labels.foreach((k,v) => k := v)}
+    labels.foreach{(k,v) => "selector" ::= { k := v}}
   def selectorMatchLabels[A <: DeploymentScope|JobScope](using A >> SpecScope)(labels:(String,String)*) = 
-    if !labels.isEmpty then "selector" ::= {"matchLabels" ::= {labels.foreach((k,v) => k := v)}}
+    labels.foreach{(k,v) => "selector" ::= {"matchLabels" ::=  k := v}}
   enum Expression:
     case In(key:String,value:Seq[String]) extends Expression
     case NotIn(key:String,value:Seq[String]) extends Expression
@@ -225,9 +225,8 @@ trait KubernetesDsl extends JsonDsl:
   def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
   def failedJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "failedJobsHistoryLimit" := int.toLong
   def successfulJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "successfulJobsHistoryLimit" := int.toLong
-  def nodeSelector(using PodScope >> SpecScope)(labels:(String,String)*) = "nodeSelector" ::= {
-    labels.toMap.foreach((k,v) => k := v)
-  }
+  def nodeSelector(using PodScope >> SpecScope)(labels:(String,String)*) =
+    labels.toMap.foreach{ (k,v) =>"nodeSelector" ::= { k := v}}
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 
     "restartPolicy" := policy
   def volumeEmptyDir(using PodScope >> SpecScope)(name:String) :Unit = 
