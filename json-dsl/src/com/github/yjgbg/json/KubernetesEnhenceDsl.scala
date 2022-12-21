@@ -151,3 +151,95 @@ trait KubernetesEnhenceDsl:
       closure.apply
     }
   }
+  case class AMQPScope(var map:Map[String,String])
+  opaque type VHostScope = Scope
+  /**
+    * 
+    *
+    * @param host
+    * @param port 管理页面的端口，一般是15672，而不是5672
+    * @param username
+    * @param password
+    * @param image
+    * @param closure
+    */
+  def amqpTopo(using PodScope >> SpecScope,UtilityImage)
+  (host:String,port:Int,username:String,password:String,image:String = "python")
+  (closure:AMQPScope ?=> Unit):Unit =   {
+    val name = s"amqp-topo-$host-$port"
+    val amqpScope = AMQPScope(Map())
+    closure.apply(using amqpScope)
+    volumeCustom(name) {
+      fileLiteralText("amqp.conf",raw"""
+        |[default]
+        |hostname = $host
+        |port = $host
+        |username = $username
+        |password = $password
+        |""".stripMargin.stripLeading().stripTrailing())
+      val cmd = amqpScope.map.zipWithIndex.map{(kv,i) => 
+        fileLiteralText(s"$i.json",kv._2)
+        s"./rabbitmqadmin -c amqp.conf -N default -V ${kv._1} import ${i}.json"
+      }.mkString("\n")
+      fileLiteralText("work.sh",raw"""
+        |curl 'http://$host:$port/cli/rabbitmqadmin' > rabbitmqadmin
+        |chmod -R a+x rabbitmqadmin
+        |$cmd
+        |""".stripMargin.stripLeading().stripTrailing())
+    }
+    container(s"amqp-topo-$host-$port",image) {
+      volumeMounts(name -> "/workspace")
+      workingDir("/workspace")
+      command("sh","work.sh")
+    }
+  }
+  def vHost(using AMQPScope)(name:String)(closure:VHostScope ?=> Unit):Unit = 
+    summon[AMQPScope].map = summon[AMQPScope].map ++ Map(name -> json(closure).spaces2)
+  opaque type QueueScope = Scope
+  def queue(using VHostScope)(
+    name:String,
+    durable:Boolean = true,
+    autoDelete: Boolean =false,
+    arguments:Scope ?=> Unit = {} 
+    // 对arguments的处理暂时是一个不够完美的方案。因为暂不支持值为多重数组的情况
+    ):Unit = "queues" ++= {
+      "name" := name
+      "durable" := durable
+      "auto_delete" := autoDelete
+      "arguments" ::= arguments
+    }
+  def exchange(using VHostScope)(
+    name:String,
+    `type`:String= "direct",
+    durable:Boolean = true,
+    autoDelete:Boolean = false,
+    internal:Boolean = false,
+    arguments:Scope ?=> Unit = {}
+    ):Unit = "exchanges" ++= {
+      "name" := name
+      "type" := `type`
+      "durable" := durable
+      "auto_delete" := autoDelete
+      "internal" := internal
+      "arguments" ::= arguments
+    }
+  def binding(using VHostScope)(
+    source:String,
+    routingKey:String,
+    destination:String,
+    destinationType:String = "queue",
+    arguments: Scope ?=> Unit = {}
+    ):Unit =
+    "bindings" ++= {
+      "source" := source
+      "destination" := destination
+      "destination_type" := destinationType
+      "routing_key" := routingKey
+      "arguments" ::= arguments
+    }
+  
+  // private[KubernetesEnhenceDsl] class MySQLScope(val host:String,val port:Int,val username:String,password:String,var dbs:Seq[DBScope])
+  // private[KubernetesEnhenceDsl] class DBScope(var tables:Seq[TableScope])
+  // private[KubernetesEnhenceDsl] class TableScope(val name:String,var id:Seq[String],var rows:Seq[TableRow])
+  // opaque type TableRow = Map[String,String]
+  // def mysqlTopo(using PodScope >> SpecScope)(username:String,password:String,host:String,port:Int = 3306)(closure:)
