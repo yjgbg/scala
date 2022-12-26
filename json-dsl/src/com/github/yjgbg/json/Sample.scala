@@ -18,7 +18,6 @@ object Sample {
             template {
               labels("app" -> "gateway")
               spec {
-                // volumePVC("dist")
                 volumeCustom("www") {
                   fileImage("www","reg2.hypers.cc/has-frontend:latest","/usr/share/nginx/www")
                   fileLiteralText("nginx.conf","""
@@ -34,6 +33,13 @@ object Sample {
                 container("app", "nginx:alpine") {
                   volumeMounts("www" -> "/usr/share/nginx/www")
                   env("k0" -> "v0")
+                }
+                rabbitmqTopo("username","password","localhost") {
+                  Seq("/has","/has-saas","/has-test").foreach {vHost(_) {
+                    exchange("aaa")
+                    queue("queue0")
+                    binding("aaa","direct","queue0")
+                  }}
                 }
               }
             }

@@ -163,8 +163,8 @@ trait KubernetesEnhenceDsl:
     * @param image
     * @param closure
     */
-  def amqpTopo(using PodScope >> SpecScope,UtilityImage)
-  (host:String,port:Int,username:String,password:String,image:String = "python")
+  def rabbitmqTopo(using PodScope >> SpecScope,UtilityImage)
+  (username:String,password:String,host:String,port:Int = 15672,image:String = "python")
   (closure:AMQPScope ?=> Unit):Unit =   {
     val name = s"amqp-topo-$host-$port"
     val amqpScope = AMQPScope(Map())
@@ -173,7 +173,7 @@ trait KubernetesEnhenceDsl:
       fileLiteralText("amqp.conf",raw"""
         |[default]
         |hostname = $host
-        |port = $host
+        |port = $port
         |username = $username
         |password = $password
         |""".stripMargin.stripLeading().stripTrailing())
