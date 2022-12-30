@@ -68,7 +68,7 @@ trait KubernetesEnhenceDsl:
     * @param image 文件所在的镜像
     * @param path 文件在镜像中所在的目录
     */
-  def fileImage(using VolumeCustomScope)(fileName:String,image:String,path:String):Unit =
+  def fileImagePath(using VolumeCustomScope)(fileName:String,image:String,path:String):Unit =
     summon[VolumeCustomScope].imagePathFileSeq = 
       summon[VolumeCustomScope].imagePathFileSeq :+ ImagePathFile(fileName,image,path)
   /**

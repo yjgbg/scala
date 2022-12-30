@@ -1,7 +1,5 @@
 package com.github.yjgbg.json
 
-import java.util.concurrent.atomic.AtomicReference
-
 object KubernetesDsl extends 
   KubernetesDsl,
   KubernetesEnhenceDsl
@@ -74,8 +72,8 @@ trait KubernetesDsl extends JsonDsl:
       }
       closure.apply
     })
-
-  def tcpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+  import scala.compiletime.ops.int.>=
+  def tcpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*)(using nodePort.type >= 0 =:= true,targetPort.type >= 0 =:= true) = 
     service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
@@ -88,7 +86,7 @@ trait KubernetesDsl extends JsonDsl:
         }
       }
     }
-  def udpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+  def udpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*)(using nodePort.type >= 0 =:= true,targetPort.type >= 0 =:= true) = 
     service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
@@ -101,7 +99,7 @@ trait KubernetesDsl extends JsonDsl:
         }
       }
     }
-  def sctpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*) = 
+  def sctpNodePort(using NamespaceScope)(nodePort:Int,targetPort:Int,selector:(String,String)*)(using nodePort.type >= 0 =:= true,targetPort.type >= 0 =:= true) = 
     service("nodeport-"+nodePort) {
       spec {
         "type" := "NodePort"
@@ -136,7 +134,7 @@ trait KubernetesDsl extends JsonDsl:
       }
       closure.apply
     })
-  def backoffLimit(using JobScope >> SpecScope)(int:Int):Unit = {
+  def backoffLimit(using JobScope >> SpecScope)(int:Int)(using int.type >= 0 =:= true):Unit = {
     "backoffLimit" := int.toLong
   }
   opaque type CronJobScope = Scope
@@ -213,7 +211,7 @@ trait KubernetesDsl extends JsonDsl:
           case Expression.DoesNotExist(key) => "key" := key;"operator" := "DoesNotExist"
       }
     })
-  def replicas(using DeploymentScope >> SpecScope)(int:Int) = "replicas" := int.toLong
+  def replicas(using DeploymentScope >> SpecScope)(int:Int)(using int.type >= 0 =:= true) = "replicas" := int.toLong
   type TemplateScope[A] = A match 
     case JobScope >> SpecScope => PodScope
     case DeploymentScope >> SpecScope => PodScope
@@ -223,8 +221,8 @@ trait KubernetesDsl extends JsonDsl:
     "template" ::= closure
   def suspend(using CronJobScope >> SpecScope)(boolean:Boolean = true) = "suspend" := boolean
   def jobTemplate(using CronJobScope >> SpecScope)(closure :JobScope ?=> Unit)= "jobTemplate" ::= closure
-  def failedJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "failedJobsHistoryLimit" := int.toLong
-  def successfulJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int) = "successfulJobsHistoryLimit" := int.toLong
+  def failedJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int)(using int.type >= 0 =:= true) = "failedJobsHistoryLimit" := int.toLong
+  def successfulJobsHistoryLimit(using CronJobScope >> SpecScope)(int:Int)(using int.type >= 0 =:= true) = "successfulJobsHistoryLimit" := int.toLong
   def nodeSelector(using PodScope >> SpecScope)(labels:(String,String)*) =
     labels.toMap.foreach{ (k,v) =>"nodeSelector" ::= { k := v}}
   def restartPolicy(using PodScope >> SpecScope)(policy:"Always"|"OnFailure"|"Never"):Unit = 

@@ -19,7 +19,7 @@ object Sample {
               labels("app" -> "gateway")
               spec {
                 volumeCustom("www") {
-                  fileImage("www","reg2.hypers.cc/has-frontend:latest","/usr/share/nginx/www")
+                  fileImagePath("www","reg2.hypers.cc/has-frontend:latest","/usr/share/nginx/www")
                   fileLiteralText("nginx.conf","""
                     |server {
                     |  listen 80;
