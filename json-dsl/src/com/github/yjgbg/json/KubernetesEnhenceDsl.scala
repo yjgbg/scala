@@ -113,7 +113,8 @@ trait KubernetesEnhenceDsl:
     script:String,
     ammVersion:String = "2.5.5-17-df243e14",
     scalaVersion:String = "3.2",
-    image:String = "eclipse-temurin:latest"
+    image:String = "eclipse-temurin:latest",
+    init:Boolean = false
   )(closure : PodScope >> SpecScope >> ContainerScope ?=> Unit ) : Unit = {
     volumeCustom(s"script-$name") {
       fileLiteralText("script.sc",script)
@@ -140,7 +141,7 @@ trait KubernetesEnhenceDsl:
       volumePVC("ammonite-cache")
       ammoniteInited = ammoniteInited + ((summon,true))
     }
-    container(name,image) {
+    (if init then initContainer else container)(name,image){
       volumeMounts(s"scripts-${name}" -> "/workspace")
       volumeMounts("coursier-cache" -> "/root/.cache/coursier/v1")
       volumeMounts("ammonite-cache" -> "/root/.ammonite/download")
@@ -164,8 +165,8 @@ trait KubernetesEnhenceDsl:
     * @param closure
     */
   def rabbitmqTopo(using PodScope >> SpecScope,UtilityImage)
-  (username:String,password:String,host:String,port:Int = 15672,image:String = "python")
-  (closure:AMQPScope ?=> Unit):Unit =   {
+  (username:String,password:String,host:String,port:Int = 15672,image:String = "python",init:Boolean = false)
+  (closure:AMQPScope ?=> Unit):Unit = {
     val name = s"amqp-topo-$host-$port"
     val amqpScope = AMQPScope(Map())
     closure.apply(using amqpScope)
@@ -187,7 +188,7 @@ trait KubernetesEnhenceDsl:
         |$cmd
         |""".stripMargin.stripLeading().stripTrailing())
     }
-    container(s"amqp-topo-$host-$port",image) {
+    (if init then initContainer else container)(s"amqp-topo-$host-$port",image) {
       volumeMounts(name -> "/workspace")
       workingDir("/workspace")
       command("sh","work.sh")

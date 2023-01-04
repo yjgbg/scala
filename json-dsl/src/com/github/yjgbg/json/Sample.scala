@@ -34,12 +34,12 @@ object Sample {
                   volumeMounts("www" -> "/usr/share/nginx/www")
                   env("k0" -> "v0")
                 }
-                rabbitmqTopo("username","password","localhost") {
-                  Seq("/has","/has-saas","/has-test").foreach {vHost(_) {
+                rabbitmqTopo("username","password","localhost",init = true) {
+                  for (x <- Array("/has","/has-saas","/has-test")) vHost(x) {
                     exchange("aaa")
                     queue("queue0")
                     binding("aaa","direct","queue0")
-                  }}
+                  }
                 }
               }
             }
