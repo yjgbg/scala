@@ -142,7 +142,7 @@ trait KubernetesEnhenceDsl:
       ammoniteInited = ammoniteInited + ((summon,true))
     }
     (if init then initContainer else container)(name,image){
-      volumeMounts(s"scripts-${name}" -> "/workspace")
+      volumeMounts(s"script-${name}" -> "/workspace")
       volumeMounts("coursier-cache" -> "/root/.cache/coursier/v1")
       volumeMounts("ammonite-cache" -> "/root/.ammonite/download")
       command("sh","-c",s"""
@@ -238,9 +238,3 @@ trait KubernetesEnhenceDsl:
       "routing_key" := routingKey
       "arguments" ::= arguments
     }
-  
-  // private[KubernetesEnhenceDsl] class MySQLScope(val host:String,val port:Int,val username:String,password:String,var dbs:Seq[DBScope])
-  // private[KubernetesEnhenceDsl] class DBScope(var tables:Seq[TableScope])
-  // private[KubernetesEnhenceDsl] class TableScope(val name:String,var id:Seq[String],var rows:Seq[TableRow])
-  // opaque type TableRow = Map[String,String]
-  // def mysqlTopo(using PodScope >> SpecScope)(username:String,password:String,host:String,port:Int = 3306)(closure:)

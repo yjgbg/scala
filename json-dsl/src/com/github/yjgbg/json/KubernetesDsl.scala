@@ -23,15 +23,16 @@ trait KubernetesDsl extends JsonDsl:
 
   class Resource(val name:String,val json:Scope ?=> Unit)
   class NamespaceScope(private[KubernetesDsl] val context:ContextScope,val name:String,var resourceSeq:Seq[Resource])
-  class ContextScope(name:String,var namespaces:Seq[NamespaceScope])
+  class ContextScope(val name:String,var namespaces:Seq[NamespaceScope])
   def context(name: String, operation: "apply"|"create"|"delete"|Null = null)(closure: ContextScope ?=> Unit) = {
     import sys.process._
     s"rm -rf target/$name/".! // 清理掉工作区
     val contextScope = ContextScope(name,Seq())
     closure(using contextScope) // 执行dsl
-    contextScope.namespaces.foreach{ns=> ns.resourceSeq.foreach{ res => 
-      writeYaml(s"target/${name}/${ns.name}-${res.name}.yaml"){res.json}
-    }}
+    for {
+      ns <- contextScope.namespaces
+      res <- ns.resourceSeq
+    } writeYaml(s"target/${name}/${ns.name}-${res.name}.yaml")(res.json)
     if (operation!=null) {
       val currentContext = "kubectl config get-contexts".!!.lines()
         .filter(it => it.contains("*"))
