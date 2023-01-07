@@ -1,13 +1,6 @@
-import $ivy.`com.lihaoyi::mill-contrib-scalapblib:$MILL_VERSION`
-
 import mill._
 import mill.scalalib._
-import coursier.Repository
-import mill.define.Task
-import coursier.maven.MavenRepository
 import publish._
-import mill.scalajslib.ScalaJSModule
-import contrib.scalapblib._
 
 object `json-dsl` extends ScalaModule with PublishModule {
   override def scalaVersion: T[String] = "3.2.1"
