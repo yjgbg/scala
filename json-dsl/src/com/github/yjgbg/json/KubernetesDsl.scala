@@ -24,7 +24,7 @@ trait KubernetesDsl extends JsonDsl:
   class Resource(val name:String,val json:Scope ?=> Unit)
   class NamespaceScope(private[KubernetesDsl] val context:ContextScope,val name:String,var resourceSeq:Seq[Resource])
   class ContextScope(val name:String,var namespaces:Seq[NamespaceScope])
-  def context(name: String, operation: "apply"|"create"|"delete"|Null = null)(closure: ContextScope ?=> Unit) = {
+  def context(name: String, operation: "apply"|"create"|"delete"|"apply --server-side=true"|Null = null)(closure: ContextScope ?=> Unit) = {
     import sys.process._
     s"rm -rf target/$name/".! // 清理掉工作区
     val contextScope = ContextScope(name,Seq())
