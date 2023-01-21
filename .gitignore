@@ -9,5 +9,6 @@
 !.vscode/extensions.json
 .bsp
 .idea
-out
+/out
 target
+node_modules

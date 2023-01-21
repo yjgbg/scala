@@ -1,5 +1,6 @@
 import mill._
 import mill.scalalib._
+import mill.scalajslib.ScalaJSModule
 import publish._
 
 object `json-dsl` extends ScalaModule with PublishModule {
@@ -28,4 +29,18 @@ object `json-dsl` extends ScalaModule with PublishModule {
     ivy"io.circe::circe-yaml:$circeVersion"
   )
   // 发布命令：./mill project_name.publish --sonatypeCreds name:password --release false --signed false
+}
+object sjsexample0 extends ScalaModule {
+  override def scalaVersion: T[String] = "3.2.1"
+  def scalaJSVersion: T[String] = "1.12.0"
+  // override def ivyDeps = Agg(
+  //   ivy"com.yang-bo::html::3.0.0-M0"
+  // )
+}
+object sjsexample extends ScalaJSModule {
+  override def scalaVersion: T[String] = "3.2.1"
+  override def scalaJSVersion: T[String] = "1.12.0"
+  override def ivyDeps = Agg(
+    ivy"com.yang-bo::html::3.0.0-M0"
+  )
 }
