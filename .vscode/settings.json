@@ -9,5 +9,11 @@
     "**/.metals": true,
     "**/.ammonite": true
   },
-  "files.autoSave": "afterDelay"
+  "files.autoSave": "afterDelay",
+  "tailwindCSS.includeLanguages": {
+    "scala": "scala"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    "class=\"([^)]*)\""
+  ],
 }

@@ -27,7 +27,7 @@ object Sample {
                     |    
                     |  }
                     |}
-                    |""".stripMargin.stripLeading().stripIndent())
+                    |""".stripMargin.stripLeading().stripTrailing())
                   fileLiteralText( "0.script.sh", "echo 'hello' > /hello.txt")
                 }
                 container("app", "nginx:alpine") {
