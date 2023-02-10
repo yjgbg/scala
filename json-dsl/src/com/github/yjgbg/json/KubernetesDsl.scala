@@ -382,6 +382,12 @@ trait KubernetesDsl extends JsonDsl:
     "requests" ::= {"cpu" := req2Limit._1.toString()}
     "limits" ::= {"cpu" := req2Limit._2.toString()}
   }
+  def hostAlias(using PodScope >> SpecScope)(ip:String,hostnames:String*) = {
+    "hostAliases" ::= {
+      "ip" := ip
+      hostnames.foreach{"hostnames" += _}
+    }
+  }
   /**
     * @param req2Limit 单位: 兆(MB)
     */
