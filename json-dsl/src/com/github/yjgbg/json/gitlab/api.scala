@@ -1,6 +1,6 @@
 package com.github.yjgbg.json.gitlab
 
-private[json] object api:
+object api:
   /**
     * The Source chat channel that triggered the ChatOps command.
     *
