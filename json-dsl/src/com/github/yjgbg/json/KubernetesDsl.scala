@@ -202,7 +202,7 @@ trait KubernetesDsl extends JsonDsl:
     infix def exists = Expression.Exists(key)
     infix def doesNotExist = Expression.DoesNotExist(key)
 
-  def selectorMatchExpression[A <: DeploymentScope|ServiceScope|JobScope](using A >> SpecScope)(expresions:Expression*) = 
+  def selectorMatchExpression[A <: DeploymentScope|JobScope](using A >> SpecScope)(expresions:Expression*) = 
     if !expresions.isEmpty then "selector" ::= expresions.foreach(expression => {
       "matchExpressions" ::= {
         expression match
