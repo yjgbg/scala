@@ -33,7 +33,7 @@ trait KubernetesEnhenceDsl:
     volumeEmptyDir(name)
     
     val atomicInt = new java.util.concurrent.atomic.AtomicInteger(0)
-    initContainer(name+"-"+atomicInt.getAndAdd(1),summon[UtilityImage].image) {
+    if (!vcs.literalTextFileSeq.isEmpty) initContainer(name+"-"+atomicInt.getAndAdd(1),summon[UtilityImage].image) {
       imagePullPolicy("IfNotPresent")
       volumeMounts(name -> "/literal")
       val variableNameAndLiteralTextFileSeq = vcs.literalTextFileSeq.distinctBy(_.key)
@@ -48,7 +48,7 @@ trait KubernetesEnhenceDsl:
       .foreach{ (image,seq) => 
         initContainer(name+"-"+atomicInt.getAndAdd(1),image) {
           volumeMounts(name -> s"/tmp/vol")
-          command("sh","-c",seq.map{ (key,path) => s"rm -rf /tmp/vol/$key\ncp -a $path /tmp/vol/$key" }.mkString("\n"))
+          command("sh","-c",seq.map{ (key,path) => s"rm -rf /tmp/vol/$key\nmkdir -p /tmp/vol\ncp -a $path /tmp/vol/$key" }.mkString("\n"))
         }
       }
   }
