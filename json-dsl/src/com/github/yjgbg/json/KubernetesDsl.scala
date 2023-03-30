@@ -383,7 +383,7 @@ trait KubernetesDsl extends JsonDsl:
     "limits" ::= {"cpu" := req2Limit._2.toString()}
   }
   def hostAlias(using PodScope >> SpecScope)(ip:String,hostnames:String*) = {
-    "hostAliases" ::= {
+    "hostAliases" ++= {
       "ip" := ip
       hostnames.foreach{"hostnames" += _}
     }
