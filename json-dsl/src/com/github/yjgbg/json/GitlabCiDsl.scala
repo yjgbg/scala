@@ -24,6 +24,7 @@ trait GitlabCiDsl extends JsonDsl:
   def default(using GitlabCiScope)(closure: JobScope ?=> Unit): Unit = job("default")(closure)
   def job(using GitlabCiScope)(name: String)(closure: JobScope ?=> Unit): Unit =
     name ::= closure
+  def resourceGroup(using JobScope)(value:String):Unit = "resource_group" := value
   def tags(using JobScope)(values: String*):Unit = values.foreach("tags" += _)
   def script(using JobScope)(commands: String*) = commands.foreach("script" += _)
   def beforeScript(using JobScope)(commands: String*) = commands.foreach("before_script" += _)
