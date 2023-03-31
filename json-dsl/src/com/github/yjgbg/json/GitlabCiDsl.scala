@@ -14,8 +14,13 @@ trait GitlabCiDsl extends JsonDsl:
   @implicitNotFound(msg ="this method invoke should in CacheScope") 
   opaque type CacheScope = Scope
   val api = gitlab.api
-  def gitlabCi(closure: GitlabCiScope ?=> Unit): Unit =
-    writeYaml("gitlab-ci.sc.yml")(closure)
+  extension [A](a:A) private def ap[B](f:A => B):B =f(a)
+  inline def gitlabCi(closure: GitlabCiScope ?=> Unit): Unit =
+    writeYaml(s"${summon[sourcecode.Enclosing].value.substring("ammonite.$file.".length()).ap{x => x.substring(0,x.indexOf(".res"))}}.yml")(closure)
+  def workflow(using GitlabCiScope)(name:String):Unit = 
+    "workflow"::= {
+      "name" := name
+    }
   def default(using GitlabCiScope)(closure: JobScope ?=> Unit): Unit = job("default")(closure)
   def job(using GitlabCiScope)(name: String)(closure: JobScope ?=> Unit): Unit =
     name ::= closure

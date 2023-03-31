@@ -5,10 +5,10 @@ import publish._
 
 object `json-dsl` extends ScalaModule with PublishModule {
   override def scalaVersion: T[String] = "3.2.1"
-  // override def sonatypeUri = "https://nexus3.hypers.cc/repository/orca"
-  // override def publishVersion = "1.4"
+  override def sonatypeUri = "https://nexus3.hypers.cc/repository/orca"
+  override def publishVersion = "1.5"
 
-  override def publishVersion = "1.4-SNAPSHOT"
+  // override def publishVersion = "1.5-SNAPSHOT"
 
   override def pomSettings = PomSettings(
     description = millModuleBasePath.value.last,
@@ -26,7 +26,8 @@ object `json-dsl` extends ScalaModule with PublishModule {
     ivy"io.circe::circe-core:$circeVersion",
     ivy"io.circe::circe-generic:$circeVersion",
     ivy"io.circe::circe-parser:$circeVersion",
-    ivy"io.circe::circe-yaml:$circeVersion"
+    ivy"io.circe::circe-yaml:$circeVersion",
+    ivy"com.lihaoyi::sourcecode:0.2.8",
   )
   // 发布命令：./mill project_name.publish --sonatypeCreds name:password --release false --signed false
 }
